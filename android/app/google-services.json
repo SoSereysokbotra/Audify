@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1035076894721",
+    "project_id": "audify-f9365",
+    "storage_bucket": "audify-f9365.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1035076894721:android:2defd214102615638c0000",
+        "android_client_info": {
+          "package_name": "com.example.audify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBU404SI4O8Ee1md4mPEmRWB5AtcPUhq1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

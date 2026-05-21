@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/navigation_router.dart';
+import '../../auth/screens/welcome_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../screens/whats_new_screen.dart';
 import '../screens/listening_history_screen.dart';
@@ -20,10 +24,7 @@ class ProfileDrawer extends StatelessWidget {
               onTap: () {
                 // Close the drawer before navigating
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                );
+                Navigator.push(context, AppMotion.route(const ProfileScreen()));
               },
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
@@ -39,7 +40,10 @@ class ProfileDrawer extends StatelessWidget {
                       alignment: Alignment.center,
                       child: Text(
                         "N",
-                        style: AppTextStyles.h1.copyWith(color: Colors.black, fontSize: 20),
+                        style: AppTextStyles.h1.copyWith(
+                          color: Colors.black,
+                          fontSize: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -49,7 +53,12 @@ class ProfileDrawer extends StatelessWidget {
                         children: [
                           Text("User Name", style: AppTextStyles.h2),
                           const SizedBox(height: 4),
-                          Text("View Profile", style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryText)),
+                          Text(
+                            "View Profile",
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryText,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -64,15 +73,34 @@ class ProfileDrawer extends StatelessWidget {
                 children: [
                   _buildDrawerItem(Icons.bolt, "What's new", () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const WhatsNewScreen()));
+                    Navigator.push(
+                      context,
+                      AppMotion.route(const WhatsNewScreen()),
+                    );
                   }),
                   _buildDrawerItem(Icons.history, "Listening history", () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const ListeningHistoryScreen()));
+                    Navigator.push(
+                      context,
+                      AppMotion.route(const ListeningHistoryScreen()),
+                    );
                   }),
                   _buildDrawerItem(Icons.settings, "Settings and privacy", () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen()));
+                    Navigator.push(
+                      context,
+                      AppMotion.route(const SettingsScreen()),
+                    );
+                  }),
+                  _buildDrawerItem(Icons.logout, "Log out", () async {
+                    Navigator.pop(context);
+                    await FirebaseAuth.instance.signOut();
+                    if (context.mounted) {
+                      NavigationRouter.navigateAndReplace(
+                        context,
+                        const WelcomeScreen(),
+                      );
+                    }
                   }),
                 ],
               ),

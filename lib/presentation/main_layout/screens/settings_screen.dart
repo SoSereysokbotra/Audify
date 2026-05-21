@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import 'edit_username_screen.dart';
@@ -42,9 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const EditUsernameScreen(),
-                ),
+                AppMotion.route(const EditUsernameScreen()),
               );
             },
           ),
@@ -53,12 +52,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: "Email",
             subtitle: "user@example.com",
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const EditEmailScreen(),
-                ),
-              );
+              Navigator.push(context, AppMotion.route(const EditEmailScreen()));
             },
           ),
           _buildSettingsTile(
@@ -115,7 +109,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Text(
         title,
-        style: AppTextStyles.h2.copyWith(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+        style: AppTextStyles.h2.copyWith(
+          fontSize: 16,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -128,9 +126,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white, size: 24),
-      title: Text(title, style: AppTextStyles.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText)),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.secondaryText, size: 20),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+      ),
+      trailing: const Icon(
+        Icons.chevron_right,
+        color: AppColors.secondaryText,
+        size: 20,
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: onTap,
     );
@@ -145,8 +156,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return SwitchListTile(
       secondary: Icon(icon, color: Colors.white, size: 24),
-      title: Text(title, style: AppTextStyles.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText)),
+      title: Text(
+        title,
+        style: AppTextStyles.bodyLarge.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+      ),
       value: value,
       onChanged: onChanged,
       activeColor: Colors.pinkAccent,

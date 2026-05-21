@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -38,7 +39,9 @@ class _CustomInputFieldState extends State<CustomInputField> {
       children: [
         Text(widget.label.toUpperCase(), style: AppTextStyles.inputLabel),
         const SizedBox(height: 8),
-        Container(
+        AnimatedContainer(
+          duration: AppMotion.quick,
+          curve: AppMotion.entranceCurve,
           height: 54,
           decoration: BoxDecoration(
             color: Colors.transparent,
@@ -47,8 +50,8 @@ class _CustomInputFieldState extends State<CustomInputField> {
               color: widget.errorText != null
                   ? AppColors.error
                   : _isFocused
-                      ? AppColors.accent
-                      : AppColors.border,
+                  ? AppColors.accent
+                  : AppColors.border,
               width: 1,
             ),
           ),
@@ -64,12 +67,21 @@ class _CustomInputFieldState extends State<CustomInputField> {
                   child: TextField(
                     obscureText: widget.isPassword,
                     keyboardType: widget.keyboardType,
-                    style: const TextStyle(color: AppColors.primaryText, fontSize: 16),
+                    style: const TextStyle(
+                      color: AppColors.primaryText,
+                      fontSize: 16,
+                    ),
                     decoration: InputDecoration(
                       hintText: widget.placeholder,
-                      hintStyle: const TextStyle(color: AppColors.secondaryText, fontSize: 16),
+                      hintStyle: const TextStyle(
+                        color: AppColors.secondaryText,
+                        fontSize: 16,
+                      ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 15,
+                      ),
                     ),
                     onChanged: widget.onChanged,
                   ),
@@ -87,7 +99,10 @@ class _CustomInputFieldState extends State<CustomInputField> {
         if (widget.errorText != null)
           Padding(
             padding: const EdgeInsets.only(top: 4.0),
-            child: Text(widget.errorText!, style: AppTextStyles.helper.copyWith(color: AppColors.error)),
+            child: Text(
+              widget.errorText!,
+              style: AppTextStyles.helper.copyWith(color: AppColors.error),
+            ),
           ),
       ],
     );

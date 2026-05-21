@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../domain/models/genre_model.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -27,15 +28,14 @@ class GenreCard extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
+        child: AppPressScale(
           onTap: () {
             // TODO: Navigate to Genre details
           },
-          borderRadius: BorderRadius.circular(20),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Stack(
-              fit: StackFit.expand, // Forces the stack to fill the whole card
+              fit: StackFit.expand,
               children: [
                 // 1. Full-cover Background Image
                 Image.network(

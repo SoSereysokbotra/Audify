@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/mock_data.dart';
 import '../widgets/library_filter_pills.dart';
 import '../widgets/library_list_item.dart';
 import '../../main_layout/widgets/profile_drawer.dart';
+import 'create_playlist_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -31,15 +33,42 @@ class _LibraryScreenState extends State<LibraryScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.music_note, color: AppColors.primaryText, size: 28),
+                leading: const Icon(
+                  Icons.music_note,
+                  color: AppColors.primaryText,
+                  size: 28,
+                ),
                 title: const Text('Playlist', style: AppTextStyles.bodyLarge),
-                subtitle: Text('Build a playlist with songs or episodes', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryText)),
-                onTap: () => Navigator.pop(context),
+                subtitle: Text(
+                  'Build a playlist with songs or episodes',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primaryText,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    AppMotion.route(
+                      const CreatePlaylistScreen(),
+                      duration: AppMotion.relaxed,
+                    ),
+                  );
+                },
               ),
               ListTile(
-                leading: const Icon(Icons.people, color: AppColors.primaryText, size: 28),
+                leading: const Icon(
+                  Icons.people,
+                  color: AppColors.primaryText,
+                  size: 28,
+                ),
                 title: const Text('Blend', style: AppTextStyles.bodyLarge),
-                subtitle: Text('Combine tastes in a shared playlist with friends', style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryText)),
+                subtitle: Text(
+                  'Combine tastes in a shared playlist with friends',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primaryText,
+                  ),
+                ),
                 onTap: () => Navigator.pop(context),
               ),
             ],
@@ -68,7 +97,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               pinned: true,
               elevation: 0,
               expandedHeight: 60,
-              automaticallyImplyLeading: false, // Prevents the back arrow from appearing
+              automaticallyImplyLeading:
+                  false, // Prevents the back arrow from appearing
               flexibleSpace: FlexibleSpaceBar(
                 background: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -88,10 +118,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               style: AppTextStyles.bodyLarge,
                               decoration: InputDecoration(
                                 hintText: "Search Your Library",
-                                hintStyle: AppTextStyles.bodyLarge.copyWith(color: AppColors.primaryText),
-                                prefixIcon: const Icon(Icons.search, color: AppColors.primaryText, size: 20),
+                                hintStyle: AppTextStyles.bodyLarge.copyWith(
+                                  color: AppColors.primaryText,
+                                ),
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: AppColors.primaryText,
+                                  size: 20,
+                                ),
                                 suffixIcon: IconButton(
-                                  icon: const Icon(Icons.close, color: AppColors.primaryText, size: 20),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppColors.primaryText,
+                                    size: 20,
+                                  ),
                                   onPressed: () {
                                     setState(() {
                                       _isSearching = false;
@@ -100,7 +140,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   },
                                 ),
                                 border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
                               ),
                             ),
                           ),
@@ -120,7 +162,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             alignment: Alignment.center,
                             child: Text(
                               "N",
-                              style: AppTextStyles.h2.copyWith(color: Colors.black, fontSize: 16),
+                              style: AppTextStyles.h2.copyWith(
+                                color: Colors.black,
+                                fontSize: 16,
+                              ),
                             ),
                           ),
                         ),
@@ -161,11 +206,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
                           children: [
-                            const Icon(Icons.swap_vert, color: Colors.white, size: 20),
+                            const Icon(
+                              Icons.swap_vert,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
-                            Text("Recently played", style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                            Text(
+                              "Recently played",
+                              style: AppTextStyles.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             const Spacer(),
-                            const Icon(Icons.grid_view, color: Colors.white, size: 20),
+                            const Icon(
+                              Icons.grid_view,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ],
                         ),
                       ),
@@ -177,45 +235,58 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             SliverList(
               delegate: SliverChildListDelegate([
-                // Pinned Liked Songs
-                LibraryListItem(
-                  title: "Liked Songs",
-                  subtitle: "Playlist • 120 songs",
-                  imageUrl: "",
-                  isPinned: true,
-                  customLeading: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                AppMotionEntry(
+                  child: LibraryListItem(
+                    title: "Liked Songs",
+                    subtitle: "Playlist • 120 songs",
+                    imageUrl: "",
+                    isPinned: true,
+                    customLeading: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
+                      child: const Icon(Icons.favorite, color: Colors.white),
                     ),
-                    child: const Icon(Icons.favorite, color: Colors.white),
                   ),
                 ),
-                // Playlists
-                ...MockData.yourPlaylists.map((p) => LibraryListItem(
-                      title: p.title,
-                      subtitle: "Playlist • ${p.creator}",
-                      imageUrl: p.coverUrl,
-                    )),
-                // Artists
-                ...MockData.trendingArtists.map((a) => LibraryListItem(
-                      title: a.name,
+                ...MockData.yourPlaylists.asMap().entries.map(
+                  (entry) => AppMotionEntry(
+                    delay: Duration(milliseconds: 40 * entry.key),
+                    child: LibraryListItem(
+                      title: entry.value.title,
+                      subtitle: "Playlist • ${entry.value.creator}",
+                      imageUrl: entry.value.coverUrl,
+                    ),
+                  ),
+                ),
+                ...MockData.trendingArtists.asMap().entries.map(
+                  (entry) => AppMotionEntry(
+                    delay: Duration(milliseconds: 40 * entry.key),
+                    child: LibraryListItem(
+                      title: entry.value.name,
                       subtitle: "Artist",
-                      imageUrl: a.imageUrl,
+                      imageUrl: entry.value.imageUrl,
                       isArtist: true,
-                    )),
-                // Albums
-                ...MockData.popularAlbums.map((a) => LibraryListItem(
-                      title: a.title,
-                      subtitle: "Album • ${a.artist}",
-                      imageUrl: a.coverUrl,
-                    )),
-                const SizedBox(height: 100), // Bottom padding
+                    ),
+                  ),
+                ),
+                ...MockData.popularAlbums.asMap().entries.map(
+                  (entry) => AppMotionEntry(
+                    delay: Duration(milliseconds: 40 * entry.key),
+                    child: LibraryListItem(
+                      title: entry.value.title,
+                      subtitle: "Album • ${entry.value.artist}",
+                      imageUrl: entry.value.coverUrl,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 100),
               ]),
             ),
           ],
@@ -237,7 +308,11 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 110.0; // Increased to fix overflow
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return child;
   }
 

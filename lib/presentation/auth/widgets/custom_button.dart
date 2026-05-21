@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -28,7 +29,7 @@ class CustomButton extends StatelessWidget {
     Color btnBgColor = backgroundColor ?? AppColors.accent;
     Color btnTextColor = textColor ?? Colors.black;
 
-    return SizedBox(
+    final button = SizedBox(
       width: double.infinity,
       height: 54,
       child: isOutlined
@@ -37,24 +38,31 @@ class CustomButton extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.primaryText, width: 1),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50), // Fully rounded
+                  borderRadius: BorderRadius.circular(50),
                 ),
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: AppColors.primaryText,
-                        strokeWidth: 2,
+              child: AnimatedSwitcher(
+                duration: AppMotion.quick,
+                child: isLoading
+                    ? const SizedBox(
+                        key: ValueKey('loading'),
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryText,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        text,
+                        key: const ValueKey('text'),
+                        style: AppTextStyles.button.copyWith(
+                          color: isDisabled
+                              ? AppColors.primaryText.withOpacity(0.5)
+                              : AppColors.primaryText,
+                        ),
                       ),
-                    )
-                  : Text(
-                      text,
-                      style: AppTextStyles.button.copyWith(
-                        color: isDisabled ? AppColors.primaryText.withOpacity(0.5) : AppColors.primaryText,
-                      ),
-                    ),
+              ),
             )
           : ElevatedButton(
               onPressed: (isDisabled || isLoading) ? null : onPressed,
@@ -62,26 +70,39 @@ class CustomButton extends StatelessWidget {
                 backgroundColor: btnBgColor,
                 disabledBackgroundColor: btnBgColor.withOpacity(0.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(50), // Fully rounded
+                  borderRadius: BorderRadius.circular(50),
                 ),
                 elevation: 0,
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        color: Colors.black,
-                        strokeWidth: 2,
+              child: AnimatedSwitcher(
+                duration: AppMotion.quick,
+                child: isLoading
+                    ? const SizedBox(
+                        key: ValueKey('loading'),
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.black,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        text,
+                        key: const ValueKey('text'),
+                        style: AppTextStyles.button.copyWith(
+                          color: isDisabled
+                              ? btnTextColor.withOpacity(0.5)
+                              : btnTextColor,
+                        ),
                       ),
-                    )
-                  : Text(
-                      text,
-                      style: AppTextStyles.button.copyWith(
-                        color: isDisabled ? btnTextColor.withOpacity(0.5) : btnTextColor,
-                      ),
-                    ),
+              ),
             ),
+    );
+
+    return AnimatedScale(
+      scale: isDisabled || isLoading ? 1 : 1,
+      duration: AppMotion.quick,
+      child: button,
     );
   }
 }

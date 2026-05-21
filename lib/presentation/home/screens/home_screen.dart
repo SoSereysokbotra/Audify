@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../widgets/category_tabs.dart';
 import '../widgets/recently_played_section.dart';
@@ -46,10 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 100),
         ];
       case 3: // Artists
-        return [
-          const TrendingArtistsSection(),
-          const SizedBox(height: 100),
-        ];
+        return [const TrendingArtistsSection(), const SizedBox(height: 100)];
       case 4: // Playlists
         return [
           const YourPlaylistsSection(),
@@ -91,12 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: const [
-                    UserGreetingSection(),
-                    SizedBox(height: 16),
-                  ],
+                child: const AppMotionEntry(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [UserGreetingSection(), SizedBox(height: 16)],
+                  ),
                 ),
               ),
               SliverPersistentHeader(
@@ -105,19 +102,41 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     color: AppColors.background,
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: CategoryTabsWidget(
-                      selectedIndex: _selectedCategoryIndex,
-                      onTabSelected: (index) {
-                        setState(() {
-                          _selectedCategoryIndex = index;
-                        });
-                      },
+                    child: AppMotionEntry(
+                      delay: const Duration(milliseconds: 80),
+                      child: CategoryTabsWidget(
+                        selectedIndex: _selectedCategoryIndex,
+                        onTabSelected: (index) {
+                          setState(() {
+                            _selectedCategoryIndex = index;
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-              SliverList(
-                delegate: SliverChildListDelegate(_buildCategoryContent()),
+              SliverToBoxAdapter(
+                child: AnimatedSwitcher(
+                  duration: AppMotion.standard,
+                  switchInCurve: AppMotion.entranceCurve,
+                  switchOutCurve: AppMotion.exitCurve,
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, 0.03),
+                      end: Offset.zero,
+                    ).animate(animation);
+
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(position: slide, child: child),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(_selectedCategoryIndex),
+                    child: Column(children: _buildCategoryContent()),
+                  ),
+                ),
               ),
             ],
           ),
@@ -139,7 +158,11 @@ class _StickyCategoryTabsDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 56.0;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return child;
   }
 
