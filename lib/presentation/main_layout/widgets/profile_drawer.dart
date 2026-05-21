@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
+import '../../../data/audify_store.dart';
 import '../../auth/screens/welcome_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../screens/whats_new_screen.dart';
@@ -30,28 +33,57 @@ class ProfileDrawer extends StatelessWidget {
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.pinkAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        "N",
-                        style: AppTextStyles.h1.copyWith(
-                          color: Colors.black,
-                          fontSize: 20,
-                        ),
-                      ),
+                    ListenableBuilder(
+                      listenable: AudifyStore.instance,
+                      builder: (context, _) {
+                        final profile = AudifyStore.instance.profile;
+                        final firebaseName =
+                            FirebaseAuth.instance.currentUser?.displayName;
+                        final name = firebaseName?.trim().isNotEmpty == true
+                            ? firebaseName!
+                            : profile.displayName;
+                        final initial = name.trim().isEmpty
+                            ? '?'
+                            : name.trim()[0].toUpperCase();
+
+                        return CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.pinkAccent,
+                          backgroundImage: profile.imagePath == null
+                              ? null
+                              : FileImage(File(profile.imagePath!)),
+                          child: profile.imagePath == null
+                              ? Text(
+                                  initial,
+                                  style: AppTextStyles.h1.copyWith(
+                                    color: Colors.black,
+                                    fontSize: 20,
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("User Name", style: AppTextStyles.h2),
+                          ListenableBuilder(
+                            listenable: AudifyStore.instance,
+                            builder: (context, _) {
+                              final profile = AudifyStore.instance.profile;
+                              final firebaseName = FirebaseAuth
+                                  .instance
+                                  .currentUser
+                                  ?.displayName;
+                              final name =
+                                  firebaseName?.trim().isNotEmpty == true
+                                  ? firebaseName!
+                                  : profile.displayName;
+                              return Text(name, style: AppTextStyles.h2);
+                            },
+                          ),
                           const SizedBox(height: 4),
                           Text(
                             "View Profile",

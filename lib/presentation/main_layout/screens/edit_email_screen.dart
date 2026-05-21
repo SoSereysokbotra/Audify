@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -10,12 +12,46 @@ class EditEmailScreen extends StatefulWidget {
 }
 
 class _EditEmailScreenState extends State<EditEmailScreen> {
-  final TextEditingController _emailController = TextEditingController(text: "user@example.com");
+  late final TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController = TextEditingController(
+      text: FirebaseAuth.instance.currentUser?.email ?? "",
+    );
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
+  }
+
+  Future<void> _save() async {
+    final email = _emailController.text.trim();
+    if (!email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email address.')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.currentUser?.verifyBeforeUpdateEmail(email);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verification email sent to your new address.'),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Failed to update email.')),
+      );
+    }
   }
 
   @override
@@ -33,15 +69,15 @@ class _EditEmailScreenState extends State<EditEmailScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              // Save logic here
-              Navigator.pop(context);
-            },
+            onPressed: _save,
             child: Text(
               "Save",
-              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.accent, fontWeight: FontWeight.bold),
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.accent,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          )
+          ),
         ],
       ),
       body: Padding(
@@ -49,7 +85,12 @@ class _EditEmailScreenState extends State<EditEmailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Email Address", style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primaryText)),
+            Text(
+              "Email Address",
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.primaryText,
+              ),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _emailController,
@@ -59,21 +100,28 @@ class _EditEmailScreenState extends State<EditEmailScreen> {
                 filled: true,
                 fillColor: AppColors.surface,
                 hintText: "Enter your email address",
-                hintStyle: AppTextStyles.bodyLarge.copyWith(color: AppColors.secondaryText),
+                hintStyle: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.secondaryText,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.accent, width: 1),
+                  borderSide: const BorderSide(
+                    color: AppColors.accent,
+                    width: 1,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              "We'll use this email to send you important updates about your account.",
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+              "Firebase will send a verification link before changing your email.",
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.secondaryText,
+              ),
             ),
           ],
         ),

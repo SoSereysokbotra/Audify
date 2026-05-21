@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/navigation_router.dart';
+import '../../../data/audify_store.dart';
+import '../../auth/screens/welcome_screen.dart';
 import 'edit_username_screen.dart';
 import 'edit_email_screen.dart';
 
@@ -17,8 +21,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dataSaver = false;
   bool _autoplay = true;
 
+  void _confirmDeleteAccount() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Delete Account?', style: AppTextStyles.h2),
+          content: const Text(
+            'This permanently removes your Firebase account. You may need to sign in again first if Firebase requires recent login.',
+            style: AppTextStyles.bodySmall,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                try {
+                  await FirebaseAuth.instance.currentUser?.delete();
+                  await FirebaseAuth.instance.signOut();
+                  if (!mounted) return;
+                  NavigationRouter.navigateAndReplace(
+                    context,
+                    const WelcomeScreen(),
+                  );
+                } on FirebaseAuthException catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        e.message ??
+                            'Could not delete account. Please sign in again.',
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -36,21 +89,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           const SizedBox(height: 16),
           _buildSectionHeader("Account"),
-          _buildSettingsTile(
-            icon: Icons.person_outline,
-            title: "Username",
-            subtitle: "User Name",
-            onTap: () {
-              Navigator.push(
-                context,
-                AppMotion.route(const EditUsernameScreen()),
+          ListenableBuilder(
+            listenable: AudifyStore.instance,
+            builder: (context, _) {
+              final currentUser = FirebaseAuth.instance.currentUser;
+              final currentProfile = AudifyStore.instance.profile;
+              final name = currentUser?.displayName?.trim().isNotEmpty == true
+                  ? currentUser!.displayName!
+                  : currentProfile.displayName;
+              return _buildSettingsTile(
+                icon: Icons.person_outline,
+                title: "Username",
+                subtitle: name,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    AppMotion.route(const EditUsernameScreen()),
+                  );
+                },
               );
             },
           ),
           _buildSettingsTile(
             icon: Icons.email_outlined,
             title: "Email",
-            subtitle: "user@example.com",
+            subtitle: user?.email ?? "No email",
             onTap: () {
               Navigator.push(context, AppMotion.route(const EditEmailScreen()));
             },
@@ -60,6 +123,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: "Subscription",
             subtitle: "Audify Free",
             onTap: () {},
+          ),
+          _buildSettingsTile(
+            icon: Icons.delete_outline,
+            title: "Delete account",
+            subtitle: "Remove your Audify account",
+            onTap: _confirmDeleteAccount,
           ),
           const Divider(color: AppColors.surface, height: 32),
           _buildSectionHeader("Playback"),

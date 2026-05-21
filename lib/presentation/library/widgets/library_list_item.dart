@@ -12,6 +12,8 @@ class LibraryListItem extends StatelessWidget {
   final bool isArtist;
   final bool isPinned;
   final Widget? customLeading;
+  final Widget? trailing;
+  final VoidCallback? onTap;
 
   const LibraryListItem({
     super.key,
@@ -21,6 +23,8 @@ class LibraryListItem extends StatelessWidget {
     this.isArtist = false,
     this.isPinned = false,
     this.customLeading,
+    this.trailing,
+    this.onTap,
   });
 
   @override
@@ -40,19 +44,21 @@ class LibraryListItem extends StatelessWidget {
         );
 
     return AppPressScale(
-      onTap: () {
-        Navigator.push(
-          context,
-          AppMotion.route(
-            AlbumDetailsScreen(
-              title: title,
-              imageUrl: imageUrl.isEmpty
-                  ? 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&q=80'
-                  : imageUrl,
-            ),
-          ),
-        );
-      },
+      onTap:
+          onTap ??
+          () {
+            Navigator.push(
+              context,
+              AppMotion.route(
+                AlbumDetailsScreen(
+                  title: title,
+                  imageUrl: imageUrl.isEmpty
+                      ? 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&q=80'
+                      : imageUrl,
+                ),
+              ),
+            );
+          },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -97,6 +103,7 @@ class LibraryListItem extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) trailing!,
           ],
         ),
       ),

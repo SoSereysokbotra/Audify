@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
 import '../../../domain/models/radio_station_model.dart';
+import '../../../domain/models/song_model.dart';
+import '../screens/song_collection_screen.dart';
 
 class RadioCard extends StatelessWidget {
   final RadioStationModel station;
@@ -10,10 +14,27 @@ class RadioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final songs = AudifyStore.instance.songs;
+    List<SongModel> songsByIds(Set<String> ids) =>
+        songs.where((song) => ids.contains(song.id)).toList();
+    final radioSongs = switch (station.id) {
+      'r1' => songsByIds({'5', '6', '4'}),
+      'r2' => songsByIds({'2', '8', '11', '12'}),
+      _ => songsByIds({'7', '9', '10', '1'}),
+    };
+
     return InkWell(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Opening radio station: ${station.name}")),
+        Navigator.push(
+          context,
+          AppMotion.route(
+            SongCollectionScreen(
+              title: station.name,
+              subtitle: station.featuredArtists,
+              coverUrl: station.coverUrls.first,
+              songs: radioSongs.isEmpty ? songs.take(4).toList() : radioSongs,
+            ),
+          ),
         );
       },
       borderRadius: BorderRadius.circular(8),
@@ -38,7 +59,10 @@ class RadioCard extends StatelessWidget {
                   const Icon(Icons.music_note, color: Colors.black, size: 20),
                   Text(
                     "RADIO",
-                    style: AppTextStyles.helper.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.helper.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -54,7 +78,10 @@ class RadioCard extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: station.backgroundGradient.last, width: 2),
+                            border: Border.all(
+                              color: station.backgroundGradient.last,
+                              width: 2,
+                            ),
                           ),
                           child: ClipOval(
                             child: Image.network(
@@ -72,7 +99,11 @@ class RadioCard extends StatelessWidget {
               const Spacer(),
               Text(
                 station.name,
-                style: AppTextStyles.bodyLarge.copyWith(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

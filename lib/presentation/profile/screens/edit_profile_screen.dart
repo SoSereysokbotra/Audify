@@ -1,6 +1,12 @@
+import 'dart:io';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({Key? key}) : super(key: key);
@@ -11,12 +17,26 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController(
-    text: "User Name",
-  );
-  final TextEditingController _bioController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _bioController;
+  final ImagePicker _picker = ImagePicker();
 
   bool _isSaving = false;
+  String? _imagePath;
+
+  @override
+  void initState() {
+    super.initState();
+    final storeProfile = AudifyStore.instance.profile;
+    final firebaseName = FirebaseAuth.instance.currentUser?.displayName;
+    _nameController = TextEditingController(
+      text: firebaseName?.trim().isNotEmpty == true
+          ? firebaseName
+          : storeProfile.displayName,
+    );
+    _bioController = TextEditingController(text: storeProfile.bio);
+    _imagePath = storeProfile.imagePath;
+  }
 
   @override
   void dispose() {
@@ -26,36 +46,112 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _handleSave() async {
-    // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isSaving = true);
+    if (!_formKey.currentState!.validate()) return;
 
-      // Simulate network request
-      await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isSaving = true);
+    try {
+      final displayName = _nameController.text.trim();
+      final bio = _bioController.text.trim();
 
+      await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
+      AudifyStore.instance.updateProfile(
+        displayName: displayName,
+        bio: bio,
+        imagePath: _imagePath,
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated successfully.')),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Failed to update profile.')),
+      );
+    } finally {
       if (mounted) {
         setState(() => _isSaving = false);
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
-        );
       }
     }
   }
 
+  Future<void> _pickProfileImage(ImageSource source) async {
+    try {
+      final image = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1024,
+      );
+      if (image == null) return;
+      setState(() => _imagePath = image.path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not pick image: $e')));
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library_outlined,
+                  color: AppColors.primaryText,
+                ),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: AppTextStyles.bodyLarge,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickProfileImage(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_camera_outlined,
+                  color: AppColors.primaryText,
+                ),
+                title: const Text('Take Photo', style: AppTextStyles.bodyLarge),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickProfileImage(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final initial = _nameController.text.trim().isEmpty
+        ? '?'
+        : _nameController.text.trim()[0].toUpperCase();
+
     return GestureDetector(
-      // Dismisses keyboard when tapping outside of input fields
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
           backgroundColor: AppColors.background,
           elevation: 0,
-          title: const Text("Edit Profile", style: AppTextStyles.h2),
+          title: const Text('Edit Profile', style: AppTextStyles.h2),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.close, color: Colors.white),
@@ -87,7 +183,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                       )
                     : const Text(
-                        "Save",
+                        'Save',
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
               ),
@@ -103,42 +199,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 16),
-
-                // Profile Picture Edit
                 Center(
                   child: Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.pinkAccent.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.pinkAccent,
-                            width: 2,
-                          ),
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.pinkAccent.withValues(
+                          alpha: 0.2,
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _nameController.text.isNotEmpty
-                              ? _nameController.text[0].toUpperCase()
-                              : "?",
-                          style: AppTextStyles.h1.copyWith(
-                            color: Colors.pinkAccent,
-                            fontSize: 48,
-                          ),
-                        ),
+                        backgroundImage: _imagePath == null
+                            ? null
+                            : FileImage(File(_imagePath!)),
+                        child: _imagePath == null
+                            ? Text(
+                                initial,
+                                style: AppTextStyles.h1.copyWith(
+                                  color: Colors.pinkAccent,
+                                  fontSize: 48,
+                                ),
+                              )
+                            : null,
                       ),
-
-                      // Interactive Camera Badge
                       Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () {
-                            // TODO: Implement image picker logic
-                          },
+                          onTap: _showImageSourceSheet,
                           customBorder: const CircleBorder(),
                           child: Container(
                             padding: const EdgeInsets.all(10),
@@ -161,12 +247,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 48),
-
-                // Display Name Input
                 Text(
-                  "Display Name",
+                  'Display Name',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.primaryText,
                     fontWeight: FontWeight.w600,
@@ -177,20 +260,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   controller: _nameController,
                   style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
                   textInputAction: TextInputAction.next,
+                  onChanged: (_) => setState(() {}),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Display name cannot be empty';
                     }
                     return null;
                   },
-                  decoration: _inputDecoration("Enter your display name"),
+                  decoration: _inputDecoration('Enter your display name'),
                 ),
-
                 const SizedBox(height: 24),
-
-                // Bio Input
                 Text(
-                  "Bio",
+                  'Bio',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.primaryText,
                     fontWeight: FontWeight.w600,
@@ -204,7 +285,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   textInputAction: TextInputAction.done,
                   style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
                   decoration: _inputDecoration(
-                    "Add a brief bio to your profile",
+                    'Add a brief bio to your profile',
                   ),
                 ),
               ],
@@ -215,7 +296,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // Reusable input decoration for consistency
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/motion/app_motion.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
 import '../../../data/mock_data.dart';
+import '../../home/widgets/song_card.dart';
 import '../widgets/genre_card.dart';
 
 class SearchScreen extends StatelessWidget {
@@ -136,6 +137,34 @@ class SearchScreen extends StatelessWidget {
                     child: GenreCard(genre: MockData.browseGenres[index]),
                   );
                 }, childCount: MockData.browseGenres.length),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Available songs", style: AppTextStyles.h2),
+                    const SizedBox(height: 16),
+                    ListenableBuilder(
+                      listenable: AudifyStore.instance,
+                      builder: (context, _) {
+                        return Column(
+                          children: AudifyStore.instance.songs
+                              .map(
+                                (song) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: SongCard(song: song),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
 

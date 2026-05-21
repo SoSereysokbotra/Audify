@@ -1,12 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
 import '../../../data/mock_data.dart';
+import '../../main_layout/widgets/profile_drawer.dart';
 import '../widgets/library_filter_pills.dart';
 import '../widgets/library_list_item.dart';
-import '../../main_layout/widgets/profile_drawer.dart';
 import 'create_playlist_screen.dart';
+import 'favorite_songs_screen.dart';
+import 'playlist_details_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({Key? key}) : super(key: key);
@@ -18,6 +24,12 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _showAddOptions(BuildContext context) {
     showModalBottomSheet(
@@ -79,12 +91,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const ProfileDrawer(),
@@ -97,8 +103,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               pinned: true,
               elevation: 0,
               expandedHeight: 60,
-              automaticallyImplyLeading:
-                  false, // Prevents the back arrow from appearing
+              automaticallyImplyLeading: false,
               flexibleSpace: FlexibleSpaceBar(
                 background: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -115,9 +120,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             child: TextField(
                               controller: _searchController,
                               autofocus: true,
+                              onChanged: (_) => setState(() {}),
                               style: AppTextStyles.bodyLarge,
                               decoration: InputDecoration(
-                                hintText: "Search Your Library",
+                                hintText: 'Search Your Library',
                                 hintStyle: AppTextStyles.bodyLarge.copyWith(
                                   color: AppColors.primaryText,
                                 ),
@@ -148,29 +154,59 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                         )
                       else ...[
-                        GestureDetector(
-                          onTap: () {
-                            Scaffold.of(context).openDrawer();
-                          },
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(
-                              color: Colors.pinkAccent,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              "N",
-                              style: AppTextStyles.h2.copyWith(
-                                color: Colors.black,
-                                fontSize: 16,
+                        Builder(
+                          builder: (context) {
+                            return GestureDetector(
+                              onTap: () => Scaffold.of(context).openDrawer(),
+                              child: ListenableBuilder(
+                                listenable: AudifyStore.instance,
+                                builder: (context, _) {
+                                  final name =
+                                      AudifyStore.instance.profile.displayName;
+                                  final initial = name.trim().isEmpty
+                                      ? '?'
+                                      : name.trim()[0].toUpperCase();
+
+                                  return CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: Colors.pinkAccent,
+                                    backgroundImage:
+                                        AudifyStore
+                                                .instance
+                                                .profile
+                                                .imagePath ==
+                                            null
+                                        ? null
+                                        : FileImage(
+                                            File(
+                                              AudifyStore
+                                                  .instance
+                                                  .profile
+                                                  .imagePath!,
+                                            ),
+                                          ),
+                                    child:
+                                        AudifyStore
+                                                .instance
+                                                .profile
+                                                .imagePath ==
+                                            null
+                                        ? Text(
+                                            initial,
+                                            style: AppTextStyles.h2.copyWith(
+                                              color: Colors.black,
+                                              fontSize: 16,
+                                            ),
+                                          )
+                                        : null,
+                                  );
+                                },
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 16),
-                        const Text("Your Library", style: AppTextStyles.h1),
+                        const Text('Your Library', style: AppTextStyles.h1),
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.search, color: Colors.white),
@@ -213,7 +249,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              "Recently played",
+                              'Recently played',
                               style: AppTextStyles.bodySmall.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -233,61 +269,99 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 ),
               ),
             ),
-            SliverList(
-              delegate: SliverChildListDelegate([
-                AppMotionEntry(
-                  child: LibraryListItem(
-                    title: "Liked Songs",
-                    subtitle: "Playlist • 120 songs",
-                    imageUrl: "",
-                    isPinned: true,
-                    customLeading: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+            SliverToBoxAdapter(
+              child: ListenableBuilder(
+                listenable: AudifyStore.instance,
+                builder: (context, _) {
+                  final store = AudifyStore.instance;
+                  final query = _searchController.text.trim().toLowerCase();
+                  final playlists = store.playlists.where((playlist) {
+                    if (query.isEmpty) return true;
+                    return playlist.title.toLowerCase().contains(query) ||
+                        playlist.description.toLowerCase().contains(query);
+                  }).toList();
+
+                  return Column(
+                    children: [
+                      AppMotionEntry(
+                        child: LibraryListItem(
+                          title: 'Liked Songs',
+                          subtitle:
+                              'Playlist - ${store.favoriteSongs.length} songs',
+                          imageUrl: '',
+                          isPinned: true,
+                          customLeading: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Colors.white,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              AppMotion.route(const FavoriteSongsScreen()),
+                            );
+                          },
                         ),
                       ),
-                      child: const Icon(Icons.favorite, color: Colors.white),
-                    ),
-                  ),
-                ),
-                ...MockData.yourPlaylists.asMap().entries.map(
-                  (entry) => AppMotionEntry(
-                    delay: Duration(milliseconds: 40 * entry.key),
-                    child: LibraryListItem(
-                      title: entry.value.title,
-                      subtitle: "Playlist • ${entry.value.creator}",
-                      imageUrl: entry.value.coverUrl,
-                    ),
-                  ),
-                ),
-                ...MockData.trendingArtists.asMap().entries.map(
-                  (entry) => AppMotionEntry(
-                    delay: Duration(milliseconds: 40 * entry.key),
-                    child: LibraryListItem(
-                      title: entry.value.name,
-                      subtitle: "Artist",
-                      imageUrl: entry.value.imageUrl,
-                      isArtist: true,
-                    ),
-                  ),
-                ),
-                ...MockData.popularAlbums.asMap().entries.map(
-                  (entry) => AppMotionEntry(
-                    delay: Duration(milliseconds: 40 * entry.key),
-                    child: LibraryListItem(
-                      title: entry.value.title,
-                      subtitle: "Album • ${entry.value.artist}",
-                      imageUrl: entry.value.coverUrl,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 100),
-              ]),
+                      ...playlists.asMap().entries.map(
+                        (entry) => AppMotionEntry(
+                          delay: Duration(milliseconds: 40 * entry.key),
+                          child: LibraryListItem(
+                            title: entry.value.title,
+                            subtitle:
+                                'Playlist - ${entry.value.creator} - ${entry.value.songIds.length} songs',
+                            imageUrl: entry.value.coverUrl,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                AppMotion.route(
+                                  PlaylistDetailsScreen(
+                                    playlistId: entry.value.id,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      if (query.isEmpty) ...[
+                        ...MockData.trendingArtists.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: LibraryListItem(
+                              title: entry.value.name,
+                              subtitle: 'Artist',
+                              imageUrl: entry.value.imageUrl,
+                              isArtist: true,
+                            ),
+                          ),
+                        ),
+                        ...MockData.popularAlbums.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: LibraryListItem(
+                              title: entry.value.title,
+                              subtitle: 'Album - ${entry.value.artist}',
+                              imageUrl: entry.value.coverUrl,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 100),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -302,10 +376,10 @@ class _LibraryHeaderDelegate extends SliverPersistentHeaderDelegate {
   _LibraryHeaderDelegate({required this.child});
 
   @override
-  double get minExtent => 110.0; // Increased to fix overflow
+  double get minExtent => 110.0;
 
   @override
-  double get maxExtent => 110.0; // Increased to fix overflow
+  double get maxExtent => 110.0;
 
   @override
   Widget build(

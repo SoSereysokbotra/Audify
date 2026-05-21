@@ -5,17 +5,14 @@ import '../../../domain/models/album_model.dart';
 
 class AlbumCard extends StatelessWidget {
   final AlbumModel album;
+  final VoidCallback? onTap;
 
-  const AlbumCard({Key? key, required this.album}) : super(key: key);
+  const AlbumCard({super.key, required this.album, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Opening album: ${album.title}")),
-        );
-      },
+      onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -33,14 +30,18 @@ class AlbumCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             album.title,
-            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             album.artist,
-            style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.secondaryText,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

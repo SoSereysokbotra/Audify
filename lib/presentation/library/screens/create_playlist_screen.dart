@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
+import '../../../domain/models/song_model.dart';
 import 'immersive_playlist_screen.dart';
 
 class CreatePlaylistScreen extends StatefulWidget {
@@ -48,26 +50,14 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
     }
   }
 
-  // Mock track list
-  List<Map<String, String>> get _allTracks => [
-    {'title': 'Blinding Lights', 'artist': 'The Weeknd', 'duration': '3:20'},
-    {'title': 'As It Was', 'artist': 'Harry Styles', 'duration': '2:37'},
-    {'title': 'Stay', 'artist': 'The Kid LAROI', 'duration': '2:21'},
-    {'title': 'Heat Waves', 'artist': 'Glass Animals', 'duration': '3:59'},
-    {'title': 'Levitating', 'artist': 'Dua Lipa', 'duration': '3:23'},
-    {'title': 'Save Your Tears', 'artist': 'The Weeknd', 'duration': '3:35'},
-    {'title': 'Peaches', 'artist': 'Justin Bieber', 'duration': '3:18'},
-    {'title': 'Good 4 U', 'artist': 'Olivia Rodrigo', 'duration': '2:58'},
-    {'title': 'Montero', 'artist': 'Lil Nas X', 'duration': '2:18'},
-    {'title': 'Kiss Me More', 'artist': 'Doja Cat', 'duration': '3:38'},
-  ];
+  List<SongModel> get _allTracks => AudifyStore.instance.songs;
 
-  List<Map<String, String>> get _filteredTracks {
+  List<SongModel> get _filteredTracks {
     if (_searchQuery.isEmpty) return _allTracks;
     return _allTracks.where((t) {
       final q = _searchQuery.toLowerCase();
-      return t['title']!.toLowerCase().contains(q) ||
-          t['artist']!.toLowerCase().contains(q);
+      return t.title.toLowerCase().contains(q) ||
+          t.artist.toLowerCase().contains(q);
     }).toList();
   }
 
@@ -108,7 +98,20 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
       _nameFocus.requestFocus();
       return;
     }
-    _showSnackBar('Playlist "${_nameController.text.trim()}" created! 🎵');
+    final selectedSongIds = _selectedTrackIndices
+        .map((index) => _allTracks[index].id)
+        .toList();
+
+    AudifyStore.instance.createPlaylist(
+      title: _nameController.text.trim(),
+      description: _descriptionController.text.trim(),
+      songIds: selectedSongIds,
+      isPrivate: _isPrivate,
+      coverUrl:
+          'https://picsum.photos/id/${111 + AudifyStore.instance.playlists.length}/200/200',
+    );
+
+    _showSnackBar('Playlist "${_nameController.text.trim()}" created');
     Navigator.pop(context);
   }
 
@@ -729,7 +732,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TrackListItem extends StatelessWidget {
-  final Map<String, String> track;
+  final SongModel track;
   final bool isSelected;
   final Color accentColor;
   final VoidCallback onTap;
@@ -788,7 +791,7 @@ class _TrackListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    track['title']!,
+                    track.title,
                     style: AppTextStyles.bodyLarge.copyWith(
                       fontSize: 16,
                       fontWeight: isSelected
@@ -801,7 +804,7 @@ class _TrackListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${track['artist']} • ${track['duration']}',
+                    track.artist,
                     style: AppTextStyles.bodySmall.copyWith(
                       fontSize: 13,
                       color: isSelected ? Colors.white70 : Colors.white54,
