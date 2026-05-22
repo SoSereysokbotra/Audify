@@ -1,15 +1,15 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
+import '../../../data/cloudinary_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({Key? key}) : super(key: key);
+  const EditProfileScreen({super.key});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -29,13 +29,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     final storeProfile = AudifyStore.instance.profile;
     final firebaseName = FirebaseAuth.instance.currentUser?.displayName;
+    final firebasePhotoUrl = FirebaseAuth.instance.currentUser?.photoURL;
     _nameController = TextEditingController(
       text: firebaseName?.trim().isNotEmpty == true
           ? firebaseName
           : storeProfile.displayName,
     );
     _bioController = TextEditingController(text: storeProfile.bio);
-    _imagePath = storeProfile.imagePath;
+    _imagePath = storeProfile.imagePath ?? firebasePhotoUrl;
   }
 
   @override
@@ -54,12 +55,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     try {
       final displayName = _nameController.text.trim();
       final bio = _bioController.text.trim();
+      final user = FirebaseAuth.instance.currentUser;
+      var profileImageUrl = _imagePath;
 
-      await FirebaseAuth.instance.currentUser?.updateDisplayName(displayName);
+      if (_imagePath != null && !isNetworkProfileImage(_imagePath)) {
+        profileImageUrl = await CloudinaryService.instance.uploadProfileImage(
+          _imagePath!,
+        );
+      }
+
+      await user?.updateDisplayName(displayName);
+      if (profileImageUrl != null) {
+        await user?.updatePhotoURL(profileImageUrl);
+      }
       AudifyStore.instance.updateProfile(
         displayName: displayName,
         bio: bio,
-        imagePath: _imagePath,
+        imagePath: profileImageUrl,
       );
 
       if (!mounted) return;
@@ -72,6 +84,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'Failed to update profile.')),
       );
+    } on CloudinaryUploadException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -208,9 +225,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         backgroundColor: Colors.pinkAccent.withValues(
                           alpha: 0.2,
                         ),
-                        backgroundImage: _imagePath == null
-                            ? null
-                            : FileImage(File(_imagePath!)),
+                        backgroundImage: profileImageProvider(_imagePath),
                         child: _imagePath == null
                             ? Text(
                                 initial,

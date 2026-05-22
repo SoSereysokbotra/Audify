@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
+import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
 import '../../auth/screens/welcome_screen.dart';
 import '../../profile/screens/profile_screen.dart';
@@ -14,7 +13,7 @@ import '../screens/listening_history_screen.dart';
 import '../screens/settings_screen.dart';
 
 class ProfileDrawer extends StatelessWidget {
-  const ProfileDrawer({Key? key}) : super(key: key);
+  const ProfileDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -45,14 +44,15 @@ class ProfileDrawer extends StatelessWidget {
                         final initial = name.trim().isEmpty
                             ? '?'
                             : name.trim()[0].toUpperCase();
+                        final imagePath =
+                            profile.imagePath ??
+                            FirebaseAuth.instance.currentUser?.photoURL;
 
                         return CircleAvatar(
                           radius: 24,
                           backgroundColor: Colors.pinkAccent,
-                          backgroundImage: profile.imagePath == null
-                              ? null
-                              : FileImage(File(profile.imagePath!)),
-                          child: profile.imagePath == null
+                          backgroundImage: profileImageProvider(imagePath),
+                          child: imagePath == null
                               ? Text(
                                   initial,
                                   style: AppTextStyles.h1.copyWith(

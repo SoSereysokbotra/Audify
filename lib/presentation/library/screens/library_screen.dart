@@ -1,12 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
 import '../../../data/mock_data.dart';
+import '../../home/widgets/song_card.dart';
 import '../../main_layout/widgets/profile_drawer.dart';
 import '../widgets/library_filter_pills.dart';
 import '../widgets/library_list_item.dart';
@@ -15,7 +16,7 @@ import 'favorite_songs_screen.dart';
 import 'playlist_details_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({Key? key}) : super(key: key);
+  const LibraryScreen({super.key});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -166,31 +167,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   final initial = name.trim().isEmpty
                                       ? '?'
                                       : name.trim()[0].toUpperCase();
+                                  final imagePath =
+                                      AudifyStore.instance.profile.imagePath ??
+                                      FirebaseAuth
+                                          .instance
+                                          .currentUser
+                                          ?.photoURL;
 
                                   return CircleAvatar(
                                     radius: 18,
                                     backgroundColor: Colors.pinkAccent,
-                                    backgroundImage:
-                                        AudifyStore
-                                                .instance
-                                                .profile
-                                                .imagePath ==
-                                            null
-                                        ? null
-                                        : FileImage(
-                                            File(
-                                              AudifyStore
-                                                  .instance
-                                                  .profile
-                                                  .imagePath!,
-                                            ),
-                                          ),
-                                    child:
-                                        AudifyStore
-                                                .instance
-                                                .profile
-                                                .imagePath ==
-                                            null
+                                    backgroundImage: profileImageProvider(
+                                      imagePath,
+                                    ),
+                                    child: imagePath == null
                                         ? Text(
                                             initial,
                                             style: AppTextStyles.h2.copyWith(
@@ -280,39 +270,89 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     return playlist.title.toLowerCase().contains(query) ||
                         playlist.description.toLowerCase().contains(query);
                   }).toList();
+                  final songs = store.songs.where((song) {
+                    if (query.isEmpty) return false;
+                    return song.title.toLowerCase().contains(query) ||
+                        song.artist.toLowerCase().contains(query);
+                  }).toList();
+                  final hasSearchResults =
+                      query.isEmpty || playlists.isNotEmpty || songs.isNotEmpty;
 
                   return Column(
                     children: [
-                      AppMotionEntry(
-                        child: LibraryListItem(
-                          title: 'Liked Songs',
-                          subtitle:
-                              'Playlist - ${store.favoriteSongs.length} songs',
-                          imageUrl: '',
-                          isPinned: true,
-                          customLeading: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                      if (query.isEmpty)
+                        AppMotionEntry(
+                          child: LibraryListItem(
+                            title: 'Liked Songs',
+                            subtitle:
+                                'Playlist - ${store.favoriteSongs.length} songs',
+                            imageUrl: '',
+                            isPinned: true,
+                            customLeading: Container(
+                              width: 64,
+                              height: 64,
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Color(0xFF4B14C5),
+                                    Color(0xFFC7E2F1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.white,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Colors.white,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                AppMotion.route(const FavoriteSongsScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                      if (songs.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Songs',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              AppMotion.route(const FavoriteSongsScreen()),
-                            );
-                          },
                         ),
-                      ),
+                        ...songs.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: SongCard(song: entry.value),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (query.isNotEmpty && playlists.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Playlists',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
                       ...playlists.asMap().entries.map(
                         (entry) => AppMotionEntry(
                           delay: Duration(milliseconds: 40 * entry.key),
@@ -334,6 +374,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                         ),
                       ),
+                      if (!hasSearchResults)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                          child: Text(
+                            'No local songs or playlists found.',
+                            textAlign: TextAlign.center,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.secondaryText,
+                            ),
+                          ),
+                        ),
                       if (query.isEmpty) ...[
                         ...MockData.trendingArtists.asMap().entries.map(
                           (entry) => AppMotionEntry(

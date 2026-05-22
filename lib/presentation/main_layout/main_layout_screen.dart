@@ -8,6 +8,7 @@ import '../search/screens/search_screen.dart';
 import '../library/screens/library_screen.dart';
 import '../library/screens/create_playlist_screen.dart';
 import '../premium/screens/premium_screen.dart';
+import '../player/widgets/mini_player.dart';
 
 class MainLayoutScreen extends StatefulWidget {
   const MainLayoutScreen({Key? key}) : super(key: key);
@@ -179,11 +180,15 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
           Positioned(bottom: 90, right: 16, child: _buildFloatingCreateMenu()),
         ],
       ),
-      bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          splashColor: Colors.transparent,
-          highlightColor: Colors.transparent,
-        ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniPlayer(),
+          Theme(
+            data: Theme.of(context).copyWith(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
         child: Container(
           color: Colors.transparent, // No solid color, pure blur
           child: ClipRect(
@@ -255,6 +260,8 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
             ),
           ),
         ),
+      ),
+        ],
       ),
     );
   }

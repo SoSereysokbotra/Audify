@@ -182,9 +182,9 @@ class MockData {
       name: 'Heartbreak Radio',
       featuredArtists: 'Katy Perry, Jamie Miller, James Arthur...',
       coverUrls: [
-        'https://picsum.photos/id/177/200/200',
-        'https://picsum.photos/id/158/200/200',
-        'https://picsum.photos/id/338/200/200',
+        'https://images.genius.com/9278c644f451b2497b31a976be2e8556.1000x1000x1.png',
+        'https://yt3.googleusercontent.com/Vd6eCo7GOLe6YGEK1TLtIw5snD3r47v2AF0vkkPcTGpDoFCty5QpdpWLQ1kxCuft8iCEeo1aMw=s900-c-k-c0x00ffffff-no-rj',
+        'https://upload.wikimedia.org/wikipedia/en/a/ad/James_Arthur_-_Back_from_the_Edge.jpg',
       ],
       backgroundGradient: [Color(0xFFB19CD9), Color(0xFF9966FF)],
     ),
@@ -193,8 +193,8 @@ class MockData {
       name: 'Acoustic Pop Radio',
       featuredArtists: 'Passenger, Lukas Graham, Charlie Puth...',
       coverUrls: [
-        'https://picsum.photos/id/449/200/200',
-        'https://picsum.photos/id/450/200/200',
+        'https://i.scdn.co/image/ab67616100005174a340be7e0bd2c71a3f2ca9ce',
+        'https://i.scdn.co/image/ab67616100005174a74cfdcc8251c711227bb0e5',
       ],
       backgroundGradient: [Color(0xFFFF6B6B), Color(0xFFFF8E72)],
     ),
@@ -231,22 +231,26 @@ class MockData {
     ArtistModel(
       id: 'ar1',
       name: 'Sombr',
-      imageUrl: 'https://picsum.photos/id/1005/300/300',
+      imageUrl:
+          'https://upload.wikimedia.org/wikipedia/commons/5/53/Sombr%2C_Islington_Academy%2C_London_%28cropped%29.jpg',
     ),
     ArtistModel(
       id: 'ar2',
       name: 'Katy Perry',
-      imageUrl: 'https://picsum.photos/id/1027/300/300',
+      imageUrl:
+          'https://deadline.com/wp-content/uploads/2024/02/katy-perry-american-idol.jpg',
     ),
     ArtistModel(
       id: 'ar3',
       name: 'Cup of Joe',
-      imageUrl: 'https://picsum.photos/id/1012/300/300',
+      imageUrl:
+          'https://yt3.googleusercontent.com/Bh9-8_9hC8UYAVih3G43dF2k4Xf0fFB4b6ydZERAURYKoIV3O6Gi3oHIIdo59xKgUbczuz4V=s900-c-k-c0x00ffffff-no-rj',
     ),
     ArtistModel(
       id: 'ar4',
       name: 'Passenger',
-      imageUrl: 'https://picsum.photos/id/1035/300/300',
+      imageUrl:
+          'https://www.liveabout.com/thmb/Mh77rJFz_C6UdUTmYPDZEJcqUEo=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-136282985-a9824a2e0c4941b8b80185f57d69f6e4.jpg',
     ),
     ArtistModel(
       id: 'ar5',
@@ -260,25 +264,28 @@ class MockData {
       id: 'nr1',
       title: 'Starboy',
       artist: 'The Weeknd',
-      coverUrl: 'https://picsum.photos/id/1050/400/400',
+      coverUrl:
+          'https://media.newyorker.com/photos/5b16cfe87018915289e3cb28/master/pass/StFelix-Charlie-Puth.jpg',
     ),
     AlbumModel(
       id: 'nr2',
       title: 'Midnights',
       artist: 'Taylor Swift',
-      coverUrl: 'https://picsum.photos/id/1060/400/400',
+      coverUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKot_PzzDBxuuM7w9BkFJnE6i6tR75bly6eg&s',
     ),
     AlbumModel(
       id: 'nr3',
       title: 'Time',
       artist: 'VannDa',
-      coverUrl: 'https://picsum.photos/id/1070/400/400',
+      coverUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTP9gcKFkzs_PWG1mk5o2ZLbTSi64DqSQgHtw&s',
     ),
     AlbumModel(
       id: 'nr4',
       title: 'Lover',
       artist: 'Suly Pheng',
-      coverUrl: 'https://picsum.photos/id/1080/400/400',
+      coverUrl: 'https://i.audiomack.com/suly-pheng/ad2cdefc0f.webp?width=456',
     ),
   ];
 

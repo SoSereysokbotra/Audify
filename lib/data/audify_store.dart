@@ -76,6 +76,13 @@ class UserPlaylist {
   }
 }
 
+class ListeningHistoryEntry {
+  final SongModel song;
+  final DateTime playedAt;
+
+  const ListeningHistoryEntry({required this.song, required this.playedAt});
+}
+
 class AudifyStore extends ChangeNotifier {
   AudifyStore._() {
     _seedPlaylists();
@@ -86,6 +93,7 @@ class AudifyStore extends ChangeNotifier {
   final List<SongModel> _songs = [...MockData.localSongs];
 
   final List<UserPlaylist> _playlists = [];
+  final List<ListeningHistoryEntry> _listeningHistory = [];
   final Set<String> _favoriteSongIds = {'1', '4'};
 
   UserProfileData _profile = const UserProfileData(
@@ -95,11 +103,92 @@ class AudifyStore extends ChangeNotifier {
 
   List<SongModel> get songs => List.unmodifiable(_songs);
   List<UserPlaylist> get playlists => List.unmodifiable(_playlists);
+  List<ListeningHistoryEntry> get listeningHistory =>
+      List.unmodifiable(_listeningHistory);
   List<String> get favoriteSongIds => List.unmodifiable(_favoriteSongIds);
   UserProfileData get profile => _profile;
 
   List<SongModel> get favoriteSongs =>
       _songs.where((song) => _favoriteSongIds.contains(song.id)).toList();
+
+  List<SongModel> get recentlyPlayedSongs {
+    final seenSongIds = <String>{};
+    final songs = <SongModel>[];
+
+    for (final entry in _listeningHistory) {
+      if (seenSongIds.add(entry.song.id)) {
+        songs.add(entry.song);
+      }
+      if (songs.length == 4) break;
+    }
+
+    if (songs.isEmpty) {
+      return MockData.recentlyPlayed;
+    }
+    return songs;
+  }
+
+  String _fileNameFromPath(String path) {
+    final parts = path.split(RegExp(r'[\\/]'));
+    return parts.isEmpty ? path : parts.last;
+  }
+
+  String _songTitleFromPath(String path) {
+    final fileName = _fileNameFromPath(path);
+    final extensionIndex = fileName.lastIndexOf('.');
+    final name = extensionIndex == -1
+        ? fileName
+        : fileName.substring(0, extensionIndex);
+    return name
+        .replaceAll(RegExp(r'[_-]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  int importLocalAudioFiles(List<String> paths) {
+    var addedCount = 0;
+
+    for (final path in paths) {
+      final trimmedPath = path.trim();
+      if (trimmedPath.isEmpty) continue;
+      final alreadyImported = _songs.any(
+        (song) => song.localAudioPath == trimmedPath,
+      );
+      if (alreadyImported) continue;
+
+      final title = _songTitleFromPath(trimmedPath);
+      _songs.insert(
+        0,
+        SongModel(
+          id: 'local_${DateTime.now().microsecondsSinceEpoch}_$addedCount',
+          title: title.isEmpty ? _fileNameFromPath(trimmedPath) : title,
+          artist: 'Local storage',
+          coverUrl: 'https://picsum.photos/id/${100 + addedCount}/400/400',
+          localAudioPath: trimmedPath,
+        ),
+      );
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      notifyListeners();
+    }
+    return addedCount;
+  }
+
+  void recordPlayedSong(SongModel song) {
+    _listeningHistory.removeWhere((entry) => entry.song.id == song.id);
+    _listeningHistory.insert(
+      0,
+      ListeningHistoryEntry(song: song, playedAt: DateTime.now()),
+    );
+
+    if (_listeningHistory.length > 100) {
+      _listeningHistory.removeRange(100, _listeningHistory.length);
+    }
+
+    notifyListeners();
+  }
 
   void _seedPlaylists() {
     for (final entry in MockData.yourPlaylists.asMap().entries) {

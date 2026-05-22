@@ -1,15 +1,14 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
 import '../../main_layout/screens/settings_screen.dart';
 
 class UserGreetingSection extends StatelessWidget {
-  const UserGreetingSection({Key? key}) : super(key: key);
+  const UserGreetingSection({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +23,8 @@ class UserGreetingSection extends StatelessWidget {
         final initial = name.trim().isEmpty
             ? '?'
             : name.trim()[0].toUpperCase();
+        final imagePath =
+            profile.imagePath ?? FirebaseAuth.instance.currentUser?.photoURL;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
@@ -34,10 +35,8 @@ class UserGreetingSection extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.pinkAccent,
-                  backgroundImage: profile.imagePath == null
-                      ? null
-                      : FileImage(File(profile.imagePath!)),
-                  child: profile.imagePath == null
+                  backgroundImage: profileImageProvider(imagePath),
+                  child: imagePath == null
                       ? Text(
                           initial,
                           style: AppTextStyles.h2.copyWith(color: Colors.black),

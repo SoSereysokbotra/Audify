@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,12 +6,13 @@ import 'package:flutter/material.dart';
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
 import '../../library/screens/playlist_details_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   void _showShareModal(BuildContext context) {
     showModalBottomSheet(
@@ -166,6 +166,7 @@ class ProfileScreen extends StatelessWidget {
             : user.emailVerified
             ? 'Verified'
             : 'Not verified';
+        final profileImagePath = profile.imagePath ?? user?.photoURL;
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -211,9 +212,9 @@ class ProfileScreen extends StatelessWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (profile.imagePath != null)
-                        Image.file(
-                          File(profile.imagePath!),
+                      if (profileImagePath != null)
+                        Image(
+                          image: profileImageProvider(profileImagePath)!,
                           fit: BoxFit.cover,
                           alignment: Alignment.topCenter,
                         )

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../domain/models/song_model.dart';
+import 'audify_store.dart';
 
 class LocalAudioPlayer extends ChangeNotifier {
   LocalAudioPlayer._();
@@ -31,10 +32,15 @@ class LocalAudioPlayer extends ChangeNotifier {
     if (_currentSong?.id != song.id) {
       _currentSong = song;
       notifyListeners();
-      await _player.setAsset(audioPath);
+      if (audioPath.startsWith('assets/')) {
+        await _player.setAsset(audioPath);
+      } else {
+        await _player.setFilePath(audioPath);
+      }
     }
 
     await _player.play();
+    AudifyStore.instance.recordPlayedSong(song);
     notifyListeners();
   }
 
@@ -48,6 +54,12 @@ class LocalAudioPlayer extends ChangeNotifier {
   }
 
   Future<void> seek(Duration position) => _player.seek(position);
+
+  Future<void> stop() async {
+    await _player.stop();
+    _currentSong = null;
+    notifyListeners();
+  }
 }
 
 class LocalAudioException implements Exception {
