@@ -17,9 +17,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _offlineMode = false;
-  bool _dataSaver = false;
-  bool _autoplay = true;
 
   void _confirmDeleteAccount() {
     showDialog<void>(
@@ -130,43 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: "Remove your Audify account",
             onTap: _confirmDeleteAccount,
           ),
-          const Divider(color: AppColors.surface, height: 32),
-          _buildSectionHeader("Playback"),
-          _buildSwitchTile(
-            icon: Icons.wifi_off_outlined,
-            title: "Offline Mode",
-            subtitle: "Only play downloaded songs",
-            value: _offlineMode,
-            onChanged: (val) => setState(() => _offlineMode = val),
-          ),
-          _buildSwitchTile(
-            icon: Icons.speed_outlined,
-            title: "Data Saver",
-            subtitle: "Reduce audio quality to save data",
-            value: _dataSaver,
-            onChanged: (val) => setState(() => _dataSaver = val),
-          ),
-          _buildSwitchTile(
-            icon: Icons.replay_outlined,
-            title: "Autoplay",
-            subtitle: "Keep playing similar songs when music ends",
-            value: _autoplay,
-            onChanged: (val) => setState(() => _autoplay = val),
-          ),
-          const Divider(color: AppColors.surface, height: 32),
-          _buildSectionHeader("Privacy"),
-          _buildSettingsTile(
-            icon: Icons.lock_outline,
-            title: "Private Session",
-            subtitle: "Temporarily hide listening activity",
-            onTap: () {},
-          ),
-          _buildSettingsTile(
-            icon: Icons.people_outline,
-            title: "Social",
-            subtitle: "Manage sharing and followers",
-            onTap: () {},
-          ),
+
           const SizedBox(height: 48),
         ],
       ),
@@ -216,30 +177,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return SwitchListTile(
-      secondary: Icon(icon, color: Colors.white, size: 24),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyLarge.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
-      ),
-      value: value,
-      onChanged: onChanged,
-      activeColor: Colors.pinkAccent,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-    );
-  }
 }

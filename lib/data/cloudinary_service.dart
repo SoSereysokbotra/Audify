@@ -23,7 +23,7 @@ class CloudinaryService {
   );
   static const _nextPublicCloudName = String.fromEnvironment(
     'NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME',
-    defaultValue: 'dssi9zedm',
+    defaultValue: 'dg5grwcd5',
   );
   static const _cloudinaryApiKey = String.fromEnvironment('CLOUDINARY_API_KEY');
   static const _nextPublicApiKey = String.fromEnvironment(
@@ -33,6 +33,7 @@ class CloudinaryService {
   static const _apiSecret = String.fromEnvironment('CLOUDINARY_API_SECRET');
   static const _uploadPreset = String.fromEnvironment(
     'CLOUDINARY_UPLOAD_PRESET',
+    defaultValue: 'ml_default',
   );
 
   static final _cloudName = _cloudinaryCloudName.isNotEmpty

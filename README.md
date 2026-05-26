@@ -2,6 +2,21 @@
 
 A new Flutter project.
 
+## Cloudinary uploads
+
+Profile image uploads should use a Cloudinary unsigned upload preset. Do not put
+the Cloudinary API secret in the Flutter app because it is compiled into the
+client.
+
+Create an unsigned upload preset in Cloudinary, then run the app with:
+
+```powershell
+flutter run --dart-define=CLOUDINARY_CLOUD_NAME=dssi9zedm --dart-define=CLOUDINARY_UPLOAD_PRESET=your_unsigned_preset
+```
+
+The VS Code launch profile prompts for `CLOUDINARY_UPLOAD_PRESET` when the app
+starts.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

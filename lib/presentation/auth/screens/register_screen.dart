@@ -4,14 +4,14 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../../../core/utils/dialog_utils.dart';
+import '../../../main.dart';
 import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_checkbox.dart';
-import 'verify_email_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -90,19 +90,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         await user.updateDisplayName(username);
         await user.sendEmailVerification();
+        await user.reload();
         if (!mounted) return;
         DialogUtils.hideDialog(context);
         DialogUtils.showSuccessDialog(
           context,
-          title: "Verify Your Email",
-          message: "We sent a verification link to $email.",
+          title: "Account Created",
+          message: "Please check your email to verify your account.",
           onContinue: () {
-            NavigationRouter.navigateAndReplace(
-              context,
-              VerifyEmailScreen(
-                mode: VerifyEmailMode.registration,
-                email: email,
-              ),
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AuthGate()),
+              (route) => false,
             );
           },
         );

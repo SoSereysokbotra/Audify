@@ -12,7 +12,9 @@ import '../../library/screens/playlist_details_screen.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final bool showBackButton;
+
+  const ProfileScreen({super.key, this.showBackButton = true});
 
   void _showShareModal(BuildContext context) {
     showModalBottomSheet(
@@ -179,13 +181,15 @@ class ProfileScreen extends StatelessWidget {
                 stretch: true,
                 backgroundColor: AppColors.background,
                 elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: AppColors.primaryText,
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                leading: showBackButton
+                    ? IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: AppColors.primaryText,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      )
+                    : const SizedBox.shrink(),
                 actions: [
                   IconButton(
                     icon: const Icon(

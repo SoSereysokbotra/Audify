@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../domain/models/playlist_model.dart';
 import '../domain/models/song_model.dart';
@@ -84,22 +87,130 @@ class ListeningHistoryEntry {
 }
 
 class AudifyStore extends ChangeNotifier {
-  AudifyStore._() {
-    _seedPlaylists();
-  }
-
   static final AudifyStore instance = AudifyStore._();
 
-  final List<SongModel> _songs = [...MockData.localSongs];
+  StreamSubscription<User?>? _authSubscription;
+  User? _currentUser;
+
+  AudifyStore._() {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen(
+      _onAuthStateChanged,
+    );
+  }
+
+  void _onAuthStateChanged(User? user) {
+    _currentUser = user;
+    if (user != null) {
+      _loadFavoritesFromFirestore();
+      _loadPlaylistsFromFirestore();
+    } else {
+      _favoriteSongIds.clear();
+      _playlists.clear();
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadPlaylistsFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final playlistsData = data['playlists'] as List<dynamic>?;
+        if (playlistsData != null) {
+          final loaded = playlistsData
+              .map((e) => _playlistFromJson(Map<String, dynamic>.from(e as Map)))
+              .toList();
+          _playlists
+            ..clear()
+            ..addAll(loaded);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading playlists from Firestore: $e");
+    }
+  }
+
+  Future<void> _syncPlaylistsToFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'playlists': _playlists.map(_playlistToJson).toList(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing playlists to Firestore: $e");
+    }
+  }
+
+  Map<String, dynamic> _playlistToJson(UserPlaylist p) => {
+        'id': p.id,
+        'title': p.title,
+        'description': p.description,
+        'creator': p.creator,
+        'coverUrl': p.coverUrl,
+        'isPrivate': p.isPrivate,
+        'songIds': p.songIds,
+      };
+
+  UserPlaylist _playlistFromJson(Map<String, dynamic> m) => UserPlaylist(
+        id: m['id'] as String,
+        title: m['title'] as String,
+        description: m['description'] as String,
+        creator: m['creator'] as String,
+        coverUrl: m['coverUrl'] as String,
+        isPrivate: m['isPrivate'] as bool,
+        songIds: List<String>.from(m['songIds'] as List<dynamic>),
+      );
+
+  Future<void> _loadFavoritesFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final favs = data['favoriteSongIds'] as List<dynamic>?;
+        if (favs != null) {
+          _favoriteSongIds.clear();
+          _favoriteSongIds.addAll(favs.cast<String>());
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading favorites: $e");
+    }
+  }
+
+  Future<void> _syncFavoritesToFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'favoriteSongIds': _favoriteSongIds.toList(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing favorites: $e");
+    }
+  }
+
+  final List<SongModel> _songs = List.from(MockData.localSongs);
 
   final List<UserPlaylist> _playlists = [];
   final List<ListeningHistoryEntry> _listeningHistory = [];
-  final Set<String> _favoriteSongIds = {'1', '4'};
+  final Set<String> _favoriteSongIds = {};
 
-  UserProfileData _profile = const UserProfileData(
-    displayName: 'User Name',
-    bio: 'Music lover building playlists on Audify.',
-  );
+  UserProfileData _profile = const UserProfileData(displayName: '', bio: '');
 
   List<SongModel> get songs => List.unmodifiable(_songs);
   List<UserPlaylist> get playlists => List.unmodifiable(_playlists);
@@ -122,9 +233,6 @@ class AudifyStore extends ChangeNotifier {
       if (songs.length == 4) break;
     }
 
-    if (songs.isEmpty) {
-      return MockData.recentlyPlayed;
-    }
     return songs;
   }
 
@@ -190,31 +298,6 @@ class AudifyStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _seedPlaylists() {
-    for (final entry in MockData.yourPlaylists.asMap().entries) {
-      final playlist = entry.value;
-      final songIds = switch (playlist.id) {
-        'p1' => ['1', '2', '3', '4'],
-        'p2' => ['2', '8', '11', '12'],
-        'p3' => ['5', '6', '4'],
-        'p4' => ['7', '9', '10'],
-        _ => _songs.take(3).map((song) => song.id).toList(),
-      };
-
-      _playlists.add(
-        UserPlaylist(
-          id: playlist.id,
-          title: playlist.title,
-          description: '${playlist.title} playlist on Audify.',
-          creator: playlist.creator,
-          coverUrl: playlist.coverUrl,
-          isPrivate: playlist.creator == 'You',
-          songIds: songIds,
-        ),
-      );
-    }
-  }
-
   SongModel? songById(String id) {
     for (final song in _songs) {
       if (song.id == id) return song;
@@ -257,6 +340,7 @@ class AudifyStore extends ChangeNotifier {
 
     _playlists.insert(0, playlist);
     notifyListeners();
+    _syncPlaylistsToFirestore();
     return playlist;
   }
 
@@ -277,11 +361,13 @@ class AudifyStore extends ChangeNotifier {
       isPrivate: isPrivate,
     );
     notifyListeners();
+    _syncPlaylistsToFirestore();
   }
 
   void deletePlaylist(String playlistId) {
     _playlists.removeWhere((playlist) => playlist.id == playlistId);
     notifyListeners();
+    _syncPlaylistsToFirestore();
   }
 
   void addSongToPlaylist(String playlistId, String songId) {
@@ -296,6 +382,7 @@ class AudifyStore extends ChangeNotifier {
       songIds: [...playlist.songIds, songId],
     );
     notifyListeners();
+    _syncPlaylistsToFirestore();
   }
 
   void removeSongFromPlaylist(String playlistId, String songId) {
@@ -309,6 +396,7 @@ class AudifyStore extends ChangeNotifier {
       songIds: playlist.songIds.where((id) => id != songId).toList(),
     );
     notifyListeners();
+    _syncPlaylistsToFirestore();
   }
 
   bool isFavorite(String songId) => _favoriteSongIds.contains(songId);
@@ -320,11 +408,13 @@ class AudifyStore extends ChangeNotifier {
       _favoriteSongIds.add(songId);
     }
     notifyListeners();
+    _syncFavoritesToFirestore();
   }
 
   void removeFavorite(String songId) {
     if (_favoriteSongIds.remove(songId)) {
       notifyListeners();
+      _syncFavoritesToFirestore();
     }
   }
 

@@ -116,18 +116,38 @@ class PlaylistDetailsScreen extends StatelessWidget {
                   ),
                 )
               else
-                ...songs.map(
-                  (song) => _PlaylistSongTile(
-                    song: song,
-                    onFavorite: () => store.toggleFavorite(song.id),
-                    isFavorite: store.isFavorite(song.id),
-                    onRemove: () {
-                      store.removeSongFromPlaylist(playlist.id, song.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Removed ${song.title}')),
-                      );
-                    },
-                  ),
+                ...songs.asMap().entries.map(
+                  (entry) {
+                    final index = entry.key;
+                    final song = entry.value;
+                    return _PlaylistSongTile(
+                      song: song,
+                      onFavorite: () => store.toggleFavorite(song.id),
+                      isFavorite: store.isFavorite(song.id),
+                      onRemove: () {
+                        store.removeSongFromPlaylist(playlist.id, song.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Removed ${song.title}')),
+                        );
+                      },
+                      onPlay: () async {
+                        try {
+                          await LocalAudioPlayer.instance.playQueue(songs, startIndex: index);
+                          if (!context.mounted) return;
+                          Navigator.push(context, AppMotion.route(NowPlayingScreen(song: song)));
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Add the file ${song.localAudioPath ?? 'for this song'} first.',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
                 ),
             ],
           ),
@@ -303,36 +323,21 @@ class _PlaylistSongTile extends StatelessWidget {
   final SongModel song;
   final VoidCallback onFavorite;
   final VoidCallback onRemove;
+  final VoidCallback onPlay;
   final bool isFavorite;
 
   const _PlaylistSongTile({
     required this.song,
     required this.onFavorite,
     required this.onRemove,
+    required this.onPlay,
     required this.isFavorite,
   });
-
-  Future<void> _openPlayer(BuildContext context) async {
-    try {
-      await LocalAudioPlayer.instance.playSong(song);
-      if (!context.mounted) return;
-      Navigator.push(context, AppMotion.route(NowPlayingScreen(song: song)));
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Add the file ${song.localAudioPath ?? 'for this song'} first.',
-          ),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      onTap: () => _openPlayer(context),
+      onTap: onPlay,
       contentPadding: EdgeInsets.zero,
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(4),

@@ -7,7 +7,6 @@ import '../../../core/utils/dialog_utils.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_input_field.dart';
-import 'login_screen.dart';
 import 'reset_password_screen.dart';
 
 enum VerifyEmailMode { registration, passwordReset }
@@ -111,18 +110,17 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   Future<void> _checkEmailVerification() async {
     DialogUtils.showLoadingDialog(context);
     try {
-      await _auth.signOut();
+      await _auth.currentUser?.reload();
       if (!mounted) return;
       DialogUtils.hideDialog(context);
-      DialogUtils.showSuccessDialog(
-        context,
-        title: 'Continue to Login',
-        message:
-            'Sign in now. Audify will check your verified status during login.',
-        onContinue: () {
-          NavigationRouter.navigateAndReplace(context, const LoginScreen());
-        },
-      );
+      
+      if (_auth.currentUser?.emailVerified == false && !_isPasswordReset) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email is not verified yet. Please check your inbox.'),
+          ),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       DialogUtils.hideDialog(context);
@@ -182,7 +180,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => NavigationRouter.goBack(context),
+          onPressed: () async {
+            if (Navigator.canPop(context)) {
+              NavigationRouter.goBack(context);
+            } else {
+              await FirebaseAuth.instance.signOut();
+            }
+          },
         ),
       ),
       body: SafeArea(

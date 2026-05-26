@@ -179,28 +179,30 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // 3. Quick Action Filters (Modern Addition)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Row(
+                      if (query.isEmpty)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: [
+                              _buildFilterChip("Podcasts"),
+                              _buildFilterChip("Live Events"),
+                              _buildFilterChip("Made For You"),
+                              _buildFilterChip("New Releases"),
+                            ],
+                          ),
+                        ),
+                      if (query.isEmpty) ...[
+                        const SizedBox(height: 32),
+                        // 4. Section Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildFilterChip("Podcasts"),
-                            _buildFilterChip("Live Events"),
-                            _buildFilterChip("Made For You"),
-                            _buildFilterChip("New Releases"),
+                            const Text("Browse all", style: AppTextStyles.h2),
+                            Icon(Icons.more_horiz, color: Colors.grey[500]),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                      // 4. Section Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text("Browse all", style: AppTextStyles.h2),
-                          Icon(Icons.more_horiz, color: Colors.grey[500]),
-                        ],
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -208,24 +210,25 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
 
             // 5. Refined Grid Layout
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio:
-                      1.5, // Slightly adjusted for modern wide cards
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+            if (query.isEmpty)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio:
+                        1.5, // Slightly adjusted for modern wide cards
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return AppMotionEntry(
+                      delay: Duration(milliseconds: 40 * index),
+                      child: GenreCard(genre: MockData.browseGenres[index]),
+                    );
+                  }, childCount: MockData.browseGenres.length),
                 ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  return AppMotionEntry(
-                    delay: Duration(milliseconds: 40 * index),
-                    child: GenreCard(genre: MockData.browseGenres[index]),
-                  );
-                }, childCount: MockData.browseGenres.length),
               ),
-            ),
 
             SliverToBoxAdapter(
               child: Padding(

@@ -4,18 +4,16 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../../../core/utils/dialog_utils.dart';
+import '../../../main.dart';
 import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_checkbox.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
-import 'verify_email_screen.dart';
-
-import '../../main_layout/main_layout_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -40,30 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (emailError == null && passwordError == null) {
       DialogUtils.showLoadingDialog(context);
       try {
-        final credential = await FirebaseAuth.instance
+        await FirebaseAuth.instance
             .signInWithEmailAndPassword(email: email, password: password);
-        await credential.user?.reload();
-        final user = FirebaseAuth.instance.currentUser;
         if (!mounted) return;
-
-        if (user != null && !user.emailVerified) {
-          await user.sendEmailVerification();
-          if (!mounted) return;
-          DialogUtils.hideDialog(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please verify your email before signing in.'),
-            ),
-          );
-          NavigationRouter.navigateAndReplace(
-            context,
-            VerifyEmailScreen(
-              mode: VerifyEmailMode.registration,
-              email: user.email,
-            ),
-          );
-          return;
-        }
 
         DialogUtils.hideDialog(context);
         DialogUtils.showSuccessDialog(
@@ -71,9 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
           title: "Login Successful",
           message: "Welcome back!",
           onContinue: () {
-            NavigationRouter.navigateAndReplace(
-              context,
-              const MainLayoutScreen(),
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AuthGate()),
+              (route) => false,
             );
           },
         );
