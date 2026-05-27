@@ -303,7 +303,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
                       borderRadius: BorderRadius.circular(32),
                       child: Image.file(_coverImage!, fit: BoxFit.cover),
                     ),
-                  // Inner shadow/border for premium glass feel
+                  // Inner shadow/border for a glass feel
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(32),
@@ -728,7 +728,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Premium Track List Item
+// Track List Item
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TrackListItem extends StatelessWidget {

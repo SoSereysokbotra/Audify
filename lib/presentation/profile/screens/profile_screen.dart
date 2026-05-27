@@ -223,36 +223,26 @@ class ProfileScreen extends StatelessWidget {
                           alignment: Alignment.topCenter,
                         )
                       else
-                        Image.network(
-                          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-                          fit: BoxFit.cover,
-                          alignment: Alignment.topCenter,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              alignment: Alignment.center,
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.pinkAccent,
-                                    Color(0xFF282828),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
+                        Container(
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.pinkAccent, Color(0xFF282828)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 78,
+                            backgroundColor: Colors.black,
+                            child: Text(
+                              initial,
+                              style: AppTextStyles.h1.copyWith(
+                                fontSize: 64,
+                                color: Colors.white,
                               ),
-                              child: CircleAvatar(
-                                radius: 78,
-                                backgroundColor: Colors.black,
-                                child: Text(
-                                  initial,
-                                  style: AppTextStyles.h1.copyWith(
-                                    fontSize: 64,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       DecoratedBox(
                         decoration: BoxDecoration(

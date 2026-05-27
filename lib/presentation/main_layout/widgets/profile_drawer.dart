@@ -11,6 +11,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../screens/whats_new_screen.dart';
 import '../screens/listening_history_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/notifications_screen.dart';
 
 class ProfileDrawer extends StatelessWidget {
   const ProfileDrawer({super.key});
@@ -110,6 +111,43 @@ class ProfileDrawer extends StatelessWidget {
                       AppMotion.route(const WhatsNewScreen()),
                     );
                   }),
+                  ListenableBuilder(
+                    listenable: AudifyStore.instance,
+                    builder: (context, _) {
+                      final unread =
+                          AudifyStore.instance.unreadNotificationCount;
+                      return _buildDrawerItem(
+                        Icons.notifications_none,
+                        "Notifications",
+                        () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            AppMotion.route(const NotificationsScreen()),
+                          );
+                        },
+                        trailing: unread == 0
+                            ? null
+                            : Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.pinkAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  unread > 99 ? '99+' : unread.toString(),
+                                  style: AppTextStyles.helper.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                      );
+                    },
+                  ),
                   _buildDrawerItem(Icons.history, "Listening history", () {
                     Navigator.pop(context);
                     Navigator.push(
@@ -143,10 +181,16 @@ class ProfileDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildDrawerItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    Widget? trailing,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white, size: 28),
       title: Text(title, style: AppTextStyles.bodyLarge),
+      trailing: trailing,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       onTap: onTap,
     );

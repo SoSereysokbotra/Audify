@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../../../core/utils/dialog_utils.dart';
+import '../../../data/audify_store.dart';
 import '../../../main.dart';
 import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
@@ -12,6 +14,8 @@ import '../widgets/custom_checkbox.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
+const _kRememberMeKey = 'remember_me_email';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -19,11 +23,45 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
   String email = "";
   String password = "";
   bool rememberMe = false;
   String? emailError;
   String? passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString(_kRememberMeKey);
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      setState(() {
+        email = savedEmail;
+        rememberMe = true;
+        _emailController.text = savedEmail;
+      });
+    }
+  }
+
+  Future<void> _saveOrClearEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (rememberMe) {
+      await prefs.setString(_kRememberMeKey, email);
+    } else {
+      await prefs.remove(_kRememberMeKey);
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
 
   void _validateAndLogin() async {
     setState(() {
@@ -38,8 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (emailError == null && passwordError == null) {
       DialogUtils.showLoadingDialog(context);
       try {
-        await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email, password: password);
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        await _saveOrClearEmail();
         if (!mounted) return;
 
         DialogUtils.hideDialog(context);
@@ -55,12 +96,22 @@ class _LoginScreenState extends State<LoginScreen> {
           },
         );
       } on FirebaseAuthException catch (e) {
+        AudifyStore.instance.addNotification(
+          category: AudifyNotificationCategory.account,
+          title: 'Login problem',
+          message: e.message ?? 'Audify could not sign you in.',
+        );
         if (!mounted) return;
         DialogUtils.hideDialog(context);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed.')));
       } catch (e) {
+        AudifyStore.instance.addNotification(
+          category: AudifyNotificationCategory.account,
+          title: 'Login problem',
+          message: 'An unexpected sign-in error occurred.',
+        );
         if (!mounted) return;
         DialogUtils.hideDialog(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -106,6 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 placeholder: "your.email@example.com",
                 keyboardType: TextInputType.emailAddress,
                 errorText: emailError,
+                controller: _emailController,
                 onChanged: (val) => setState(() => email = val),
               ),
               const SizedBox(height: 24),

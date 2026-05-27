@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
+import '../../main_layout/screens/notifications_screen.dart';
 import '../../main_layout/screens/settings_screen.dart';
 
 class UserGreetingSection extends StatelessWidget {
@@ -52,6 +53,41 @@ class UserGreetingSection extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+              ),
+              IconButton(
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none,
+                      color: AppColors.primaryText,
+                    ),
+                    if (AudifyStore.instance.unreadNotificationCount > 0)
+                      Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.pinkAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.background,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                tooltip: 'Notifications',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    AppMotion.route(const NotificationsScreen()),
+                  );
+                },
               ),
               IconButton(
                 icon: const Icon(

@@ -85,6 +85,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         SnackBar(content: Text(e.message ?? 'Failed to update profile.')),
       );
     } on CloudinaryUploadException catch (e) {
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.profile,
+        title: 'Profile image upload failed',
+        message: e.message,
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -106,6 +111,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (image == null) return;
       setState(() => _imagePath = image.path);
     } catch (e) {
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.profile,
+        title: 'Profile image selection failed',
+        message: 'Could not pick a profile image.',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

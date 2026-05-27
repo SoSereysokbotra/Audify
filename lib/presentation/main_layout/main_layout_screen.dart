@@ -6,7 +6,6 @@ import '../../core/theme/app_text_styles.dart';
 import '../home/screens/home_screen.dart';
 import '../search/screens/search_screen.dart';
 import '../library/screens/library_screen.dart';
-import '../premium/screens/premium_screen.dart';
 import '../profile/screens/profile_screen.dart';
 import '../player/widgets/mini_player.dart';
 
@@ -24,10 +23,8 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
     const HomeScreen(),
     const SearchScreen(),
     const LibraryScreen(),
-    const PremiumScreen(),
     const ProfileScreen(showBackButton: false),
   ];
-
 
   @override
   Widget build(BuildContext context) {
@@ -66,60 +63,56 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
               splashColor: Colors.transparent,
               highlightColor: Colors.transparent,
             ),
-        child: Container(
-          color: Colors.transparent, // No solid color, pure blur
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: 15.0,
-                sigmaY: 15.0,
-              ), // Increased blur
-              child: BottomNavigationBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                type: BottomNavigationBarType.fixed,
-                currentIndex: _currentIndex,
-                selectedItemColor: Colors.white,
-                unselectedItemColor: AppColors.secondaryText,
-                selectedLabelStyle: AppTextStyles.helper.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
+            child: Container(
+              color: Colors.transparent, // No solid color, pure blur
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: 15.0,
+                    sigmaY: 15.0,
+                  ), // Increased blur
+                  child: BottomNavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    type: BottomNavigationBarType.fixed,
+                    currentIndex: _currentIndex,
+                    selectedItemColor: Colors.white,
+                    unselectedItemColor: AppColors.secondaryText,
+                    selectedLabelStyle: AppTextStyles.helper.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: AppTextStyles.helper.copyWith(
+                      fontSize: 10,
+                    ),
+                    onTap: (index) {
+                      setState(() {
+                        _currentIndex = index;
+                      });
+                    },
+                    items: const [
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.home_filled),
+                        label: "Home",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.search),
+                        label: "Search",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.library_music),
+                        label: "Your Library",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.person),
+                        label: "Profile",
+                      ),
+                    ],
+                  ),
                 ),
-                unselectedLabelStyle: AppTextStyles.helper.copyWith(
-                  fontSize: 10,
-                ),
-                onTap: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                items: [
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.home_filled),
-                    label: "Home",
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.search),
-                    label: "Search",
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.library_music),
-                    label: "Your Library",
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.star),
-                    label: "Premium",
-                  ),
-                  const BottomNavigationBarItem(
-                    icon: Icon(Icons.person),
-                    label: "Profile",
-                  ),
-                ],
               ),
             ),
           ),
-        ),
-      ),
         ],
       ),
     );

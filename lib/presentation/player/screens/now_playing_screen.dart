@@ -28,6 +28,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     try {
       await _audio.togglePlayPause();
     } catch (_) {
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.playback,
+        title: 'Playback problem',
+        message:
+            'Audify could not play "${widget.song.title}". Check the audio file.',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -62,7 +68,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       itemCount: playlists.length,
                       itemBuilder: (context, index) {
                         final playlist = playlists[index];
-                        final alreadyAdded = playlist.songIds.contains(widget.song.id);
+                        final alreadyAdded = playlist.songIds.contains(
+                          widget.song.id,
+                        );
                         return ListTile(
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
@@ -92,7 +100,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           onTap: alreadyAdded
                               ? null
                               : () {
-                                  store.addSongToPlaylist(playlist.id, widget.song.id);
+                                  store.addSongToPlaylist(
+                                    playlist.id,
+                                    widget.song.id,
+                                  );
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -132,13 +143,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ListTile(
                     leading: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite
-                          ? AppColors.accent
-                          : Colors.white,
+                      color: isFavorite ? AppColors.accent : Colors.white,
                     ),
                     title: Text(
                       isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                      style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     onTap: () {
                       store.toggleFavorite(widget.song.id);
@@ -161,7 +172,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     ),
                     title: Text(
                       "Add to Playlist",
-                      style: AppTextStyles.bodyLarge.copyWith(color: Colors.white),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -169,11 +182,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(
-                      Icons.share,
-                      color: Colors.white,
+                    leading: const Icon(Icons.share, color: Colors.white),
+                    title: Text(
+                      "Share",
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: Colors.white,
+                      ),
                     ),
-                    title: Text("Share", style: AppTextStyles.bodyLarge.copyWith(color: Colors.white)),
                     onTap: () => Navigator.pop(context),
                   ),
                 ],
@@ -292,8 +307,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ListenableBuilder(
               listenable: AudifyStore.instance,
               builder: (context, _) {
-                final isFavorite =
-                    AudifyStore.instance.isFavorite(song.id);
+                final isFavorite = AudifyStore.instance.isFavorite(song.id);
                 return IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,

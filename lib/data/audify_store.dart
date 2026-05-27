@@ -86,6 +86,45 @@ class ListeningHistoryEntry {
   const ListeningHistoryEntry({required this.song, required this.playedAt});
 }
 
+enum AudifyNotificationCategory {
+  music,
+  playlist,
+  favorite,
+  playback,
+  account,
+  profile,
+  whatsNew,
+}
+
+class AudifyNotification {
+  final String id;
+  final AudifyNotificationCategory category;
+  final String title;
+  final String message;
+  final DateTime createdAt;
+  final bool isRead;
+
+  const AudifyNotification({
+    required this.id,
+    required this.category,
+    required this.title,
+    required this.message,
+    required this.createdAt,
+    this.isRead = false,
+  });
+
+  AudifyNotification copyWith({bool? isRead}) {
+    return AudifyNotification(
+      id: id,
+      category: category,
+      title: title,
+      message: message,
+      createdAt: createdAt,
+      isRead: isRead ?? this.isRead,
+    );
+  }
+}
+
 class AudifyStore extends ChangeNotifier {
   static final AudifyStore instance = AudifyStore._();
 
@@ -98,14 +137,22 @@ class AudifyStore extends ChangeNotifier {
     );
   }
 
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
   void _onAuthStateChanged(User? user) {
     _currentUser = user;
     if (user != null) {
       _loadFavoritesFromFirestore();
       _loadPlaylistsFromFirestore();
+      _loadNotificationsFromFirestore();
     } else {
       _favoriteSongIds.clear();
       _playlists.clear();
+      _notifications.clear();
       notifyListeners();
     }
   }
@@ -122,7 +169,9 @@ class AudifyStore extends ChangeNotifier {
         final playlistsData = data['playlists'] as List<dynamic>?;
         if (playlistsData != null) {
           final loaded = playlistsData
-              .map((e) => _playlistFromJson(Map<String, dynamic>.from(e as Map)))
+              .map(
+                (e) => _playlistFromJson(Map<String, dynamic>.from(e as Map)),
+              )
               .toList();
           _playlists
             ..clear()
@@ -150,24 +199,24 @@ class AudifyStore extends ChangeNotifier {
   }
 
   Map<String, dynamic> _playlistToJson(UserPlaylist p) => {
-        'id': p.id,
-        'title': p.title,
-        'description': p.description,
-        'creator': p.creator,
-        'coverUrl': p.coverUrl,
-        'isPrivate': p.isPrivate,
-        'songIds': p.songIds,
-      };
+    'id': p.id,
+    'title': p.title,
+    'description': p.description,
+    'creator': p.creator,
+    'coverUrl': p.coverUrl,
+    'isPrivate': p.isPrivate,
+    'songIds': p.songIds,
+  };
 
   UserPlaylist _playlistFromJson(Map<String, dynamic> m) => UserPlaylist(
-        id: m['id'] as String,
-        title: m['title'] as String,
-        description: m['description'] as String,
-        creator: m['creator'] as String,
-        coverUrl: m['coverUrl'] as String,
-        isPrivate: m['isPrivate'] as bool,
-        songIds: List<String>.from(m['songIds'] as List<dynamic>),
-      );
+    id: m['id'] as String,
+    title: m['title'] as String,
+    description: m['description'] as String,
+    creator: m['creator'] as String,
+    coverUrl: m['coverUrl'] as String,
+    isPrivate: m['isPrivate'] as bool,
+    songIds: List<String>.from(m['songIds'] as List<dynamic>),
+  );
 
   Future<void> _loadFavoritesFromFirestore() async {
     if (_currentUser == null) return;
@@ -204,11 +253,94 @@ class AudifyStore extends ChangeNotifier {
     }
   }
 
+  String _categoryToJson(AudifyNotificationCategory category) => category.name;
+
+  AudifyNotificationCategory _categoryFromJson(String? value) {
+    return AudifyNotificationCategory.values.firstWhere(
+      (category) => category.name == value,
+      orElse: () => AudifyNotificationCategory.whatsNew,
+    );
+  }
+
+  Map<String, dynamic> _notificationToJson(AudifyNotification notification) => {
+    'id': notification.id,
+    'category': _categoryToJson(notification.category),
+    'title': notification.title,
+    'message': notification.message,
+    'createdAt': Timestamp.fromDate(notification.createdAt),
+    'isRead': notification.isRead,
+  };
+
+  AudifyNotification _notificationFromJson(Map<String, dynamic> data) {
+    final createdAtValue = data['createdAt'];
+    final createdAt = createdAtValue is Timestamp
+        ? createdAtValue.toDate()
+        : DateTime.tryParse(createdAtValue?.toString() ?? '') ?? DateTime.now();
+
+    return AudifyNotification(
+      id:
+          data['id'] as String? ??
+          'notification_${DateTime.now().microsecondsSinceEpoch}',
+      category: _categoryFromJson(data['category'] as String?),
+      title: data['title'] as String? ?? 'Audify',
+      message: data['message'] as String? ?? '',
+      createdAt: createdAt,
+      isRead: data['isRead'] as bool? ?? false,
+    );
+  }
+
+  Future<void> _loadNotificationsFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (!doc.exists) return;
+
+      final data = doc.data()!;
+      final notificationsData = data['notifications'] as List<dynamic>?;
+      if (notificationsData == null) return;
+
+      final loaded =
+          notificationsData
+              .map(
+                (item) => _notificationFromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ),
+              )
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      _notifications
+        ..clear()
+        ..addAll(loaded.take(40));
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading notifications from Firestore: $e");
+    }
+  }
+
+  Future<void> _syncNotificationsToFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'notifications': _notifications.map(_notificationToJson).toList(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing notifications to Firestore: $e");
+    }
+  }
+
   final List<SongModel> _songs = List.from(MockData.localSongs);
 
   final List<UserPlaylist> _playlists = [];
   final List<ListeningHistoryEntry> _listeningHistory = [];
   final Set<String> _favoriteSongIds = {};
+  final List<AudifyNotification> _notifications = [];
 
   UserProfileData _profile = const UserProfileData(displayName: '', bio: '');
 
@@ -218,6 +350,10 @@ class AudifyStore extends ChangeNotifier {
       List.unmodifiable(_listeningHistory);
   List<String> get favoriteSongIds => List.unmodifiable(_favoriteSongIds);
   UserProfileData get profile => _profile;
+  List<AudifyNotification> get notifications =>
+      List.unmodifiable(_notifications);
+  int get unreadNotificationCount =>
+      _notifications.where((notification) => !notification.isRead).length;
 
   List<SongModel> get favoriteSongs =>
       _songs.where((song) => _favoriteSongIds.contains(song.id)).toList();
@@ -279,6 +415,13 @@ class AudifyStore extends ChangeNotifier {
     }
 
     if (addedCount > 0) {
+      addNotification(
+        category: AudifyNotificationCategory.music,
+        title: addedCount == 1 ? 'New song added' : 'New music added',
+        message: addedCount == 1
+            ? 'A local song is now available in your library.'
+            : '$addedCount local songs are now available in your library.',
+      );
       notifyListeners();
     }
     return addedCount;
@@ -339,6 +482,13 @@ class AudifyStore extends ChangeNotifier {
     );
 
     _playlists.insert(0, playlist);
+    addNotification(
+      category: AudifyNotificationCategory.playlist,
+      title: 'Playlist created',
+      message: playlist.songIds.isEmpty
+          ? '"${playlist.title}" is ready for songs.'
+          : '"${playlist.title}" is ready with ${playlist.songIds.length} songs.',
+    );
     notifyListeners();
     _syncPlaylistsToFirestore();
     return playlist;
@@ -360,12 +510,25 @@ class AudifyStore extends ChangeNotifier {
       description: description?.trim(),
       isPrivate: isPrivate,
     );
+    addNotification(
+      category: AudifyNotificationCategory.playlist,
+      title: 'Playlist updated',
+      message: '"${_playlists[index].title}" has been updated.',
+    );
     notifyListeners();
     _syncPlaylistsToFirestore();
   }
 
   void deletePlaylist(String playlistId) {
+    final removedPlaylist = playlistById(playlistId);
     _playlists.removeWhere((playlist) => playlist.id == playlistId);
+    if (removedPlaylist != null) {
+      addNotification(
+        category: AudifyNotificationCategory.playlist,
+        title: 'Playlist deleted',
+        message: '"${removedPlaylist.title}" was removed from your library.',
+      );
+    }
     notifyListeners();
     _syncPlaylistsToFirestore();
   }
@@ -381,6 +544,14 @@ class AudifyStore extends ChangeNotifier {
     _playlists[index] = playlist.copyWith(
       songIds: [...playlist.songIds, songId],
     );
+    final song = songById(songId);
+    addNotification(
+      category: AudifyNotificationCategory.playlist,
+      title: 'Song added to playlist',
+      message: song == null
+          ? 'A song was added to "${playlist.title}".'
+          : '"${song.title}" was added to "${playlist.title}".',
+    );
     notifyListeners();
     _syncPlaylistsToFirestore();
   }
@@ -395,6 +566,14 @@ class AudifyStore extends ChangeNotifier {
     _playlists[index] = playlist.copyWith(
       songIds: playlist.songIds.where((id) => id != songId).toList(),
     );
+    final song = songById(songId);
+    addNotification(
+      category: AudifyNotificationCategory.playlist,
+      title: 'Song removed from playlist',
+      message: song == null
+          ? 'A song was removed from "${playlist.title}".'
+          : '"${song.title}" was removed from "${playlist.title}".',
+    );
     notifyListeners();
     _syncPlaylistsToFirestore();
   }
@@ -402,10 +581,25 @@ class AudifyStore extends ChangeNotifier {
   bool isFavorite(String songId) => _favoriteSongIds.contains(songId);
 
   void toggleFavorite(String songId) {
+    final song = songById(songId);
     if (_favoriteSongIds.contains(songId)) {
       _favoriteSongIds.remove(songId);
+      addNotification(
+        category: AudifyNotificationCategory.favorite,
+        title: 'Removed from favorites',
+        message: song == null
+            ? 'A song was removed from favorites.'
+            : '"${song.title}" was removed from favorites.',
+      );
     } else {
       _favoriteSongIds.add(songId);
+      addNotification(
+        category: AudifyNotificationCategory.favorite,
+        title: 'Added to favorites',
+        message: song == null
+            ? 'A song was added to favorites.'
+            : '"${song.title}" was added to favorites.',
+      );
     }
     notifyListeners();
     _syncFavoritesToFirestore();
@@ -413,6 +607,14 @@ class AudifyStore extends ChangeNotifier {
 
   void removeFavorite(String songId) {
     if (_favoriteSongIds.remove(songId)) {
+      final song = songById(songId);
+      addNotification(
+        category: AudifyNotificationCategory.favorite,
+        title: 'Removed from favorites',
+        message: song == null
+            ? 'A song was removed from favorites.'
+            : '"${song.title}" was removed from favorites.',
+      );
       notifyListeners();
       _syncFavoritesToFirestore();
     }
@@ -428,6 +630,61 @@ class AudifyStore extends ChangeNotifier {
       bio: bio.trim(),
       imagePath: imagePath,
     );
+    addNotification(
+      category: AudifyNotificationCategory.profile,
+      title: 'Profile updated',
+      message: 'Your Audify profile changes were saved.',
+    );
     notifyListeners();
+  }
+
+  void addNotification({
+    required AudifyNotificationCategory category,
+    required String title,
+    required String message,
+  }) {
+    final notification = AudifyNotification(
+      id: 'notification_${DateTime.now().microsecondsSinceEpoch}',
+      category: category,
+      title: title,
+      message: message,
+      createdAt: DateTime.now(),
+    );
+
+    _notifications.insert(0, notification);
+    if (_notifications.length > 40) {
+      _notifications.removeRange(40, _notifications.length);
+    }
+    notifyListeners();
+    _syncNotificationsToFirestore();
+  }
+
+  void markNotificationRead(String notificationId) {
+    final index = _notifications.indexWhere(
+      (notification) => notification.id == notificationId,
+    );
+    if (index == -1 || _notifications[index].isRead) return;
+
+    _notifications[index] = _notifications[index].copyWith(isRead: true);
+    notifyListeners();
+    _syncNotificationsToFirestore();
+  }
+
+  void markAllNotificationsRead() {
+    if (_notifications.every((notification) => notification.isRead)) return;
+
+    for (var i = 0; i < _notifications.length; i++) {
+      _notifications[i] = _notifications[i].copyWith(isRead: true);
+    }
+    notifyListeners();
+    _syncNotificationsToFirestore();
+  }
+
+  void clearNotifications() {
+    if (_notifications.isEmpty) return;
+
+    _notifications.clear();
+    notifyListeners();
+    _syncNotificationsToFirestore();
   }
 }

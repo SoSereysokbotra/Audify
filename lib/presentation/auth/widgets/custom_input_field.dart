@@ -12,6 +12,7 @@ class CustomInputField extends StatefulWidget {
   final Function(String)? onChanged;
   final Widget? suffixIcon;
   final bool isValid;
+  final TextEditingController? controller;
 
   const CustomInputField({
     Key? key,
@@ -23,6 +24,7 @@ class CustomInputField extends StatefulWidget {
     this.onChanged,
     this.suffixIcon,
     this.isValid = false,
+    this.controller,
   }) : super(key: key);
 
   @override
@@ -65,6 +67,7 @@ class _CustomInputFieldState extends State<CustomInputField> {
                     });
                   },
                   child: TextField(
+                    controller: widget.controller,
                     obscureText: widget.isPassword,
                     keyboardType: widget.keyboardType,
                     style: const TextStyle(

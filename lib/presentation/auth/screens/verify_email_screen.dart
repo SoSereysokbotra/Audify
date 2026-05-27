@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/dialog_utils.dart';
 import '../../../core/utils/navigation_router.dart';
+import '../../../data/audify_store.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_input_field.dart';
 import 'reset_password_screen.dart';
@@ -86,6 +87,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         await user.sendEmailVerification();
       }
 
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.account,
+        title: _isPasswordReset
+            ? 'Password reset email sent'
+            : 'Verification email sent',
+        message: _isPasswordReset
+            ? 'A new password reset link was sent to your inbox.'
+            : 'A new verification link was sent to your inbox.',
+      );
       if (!mounted) return;
       DialogUtils.hideDialog(context);
       _startTimer();
@@ -113,11 +123,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       await _auth.currentUser?.reload();
       if (!mounted) return;
       DialogUtils.hideDialog(context);
-      
+
       if (_auth.currentUser?.emailVerified == false && !_isPasswordReset) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email is not verified yet. Please check your inbox.'),
+            content: Text(
+              'Email is not verified yet. Please check your inbox.',
+            ),
           ),
         );
       }

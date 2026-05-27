@@ -17,7 +17,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-
   void _confirmDeleteAccount() {
     showDialog<void>(
       context: context,
@@ -116,12 +115,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           _buildSettingsTile(
-            icon: Icons.workspace_premium_outlined,
-            title: "Subscription",
-            subtitle: "Audify Free",
-            onTap: () {},
-          ),
-          _buildSettingsTile(
             icon: Icons.delete_outline,
             title: "Delete account",
             subtitle: "Remove your Audify account",
@@ -176,5 +169,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: onTap,
     );
   }
-
 }

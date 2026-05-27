@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/audify_store.dart';
 import '../../../data/mock_data.dart';
+import '../../../domain/models/album_model.dart';
+import '../../../domain/models/mix_model.dart';
+import '../../../domain/models/radio_station_model.dart';
 import '../../../domain/models/song_model.dart';
 import '../../home/widgets/song_card.dart';
 import '../widgets/genre_card.dart';
@@ -18,6 +20,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  String? _selectedCategory;
 
   @override
   void dispose() {
@@ -25,44 +28,13 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  Future<void> _browseLocalMusic() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowMultiple: true,
-      );
-      final paths = result?.files
-          .map((file) => file.path)
-          .whereType<String>()
-          .toList(growable: false);
-
-      if (paths == null || paths.isEmpty) return;
-
-      final addedCount = AudifyStore.instance.importLocalAudioFiles(paths);
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            addedCount == 0
-                ? 'Those songs are already in your local music.'
-                : 'Added $addedCount local song${addedCount == 1 ? '' : 's'}.',
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not browse local music: $e')),
-      );
-    }
-  }
-
   List<SongModel> _filteredSongs(List<SongModel> songs) {
     final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return songs;
+    final category = _selectedCategory;
+    final categorySongs = category == null ? songs : _songsForCategory(songs);
+    if (query.isEmpty) return categorySongs;
 
-    return songs
+    return categorySongs
         .where((song) {
           return song.title.toLowerCase().contains(query) ||
               song.artist.toLowerCase().contains(query);
@@ -70,9 +42,189 @@ class _SearchScreenState extends State<SearchScreen> {
         .toList(growable: false);
   }
 
+  List<SongModel> _songsForCategory(List<SongModel> songs) {
+    switch (_selectedCategory) {
+      case 'Podcasts':
+        return songs.take(4).toList(growable: false);
+      case 'Live Events':
+        return songs
+            .where(
+              (song) =>
+                  song.artist.contains('Lana') ||
+                  song.artist.contains('Arctic') ||
+                  song.artist.contains('Bruno'),
+            )
+            .toList(growable: false);
+      case 'Made For You':
+        return [
+          songs[0],
+          songs[2],
+          songs[4],
+          songs[8],
+          songs[15],
+        ].whereType<SongModel>().toList(growable: false);
+      case 'New Releases':
+        return songs.take(6).toList(growable: false);
+      case 'Khmer Music':
+        return songs
+            .where(
+              (song) =>
+                  song.artist.toLowerCase().contains('khmer') ||
+                  song.artist.toLowerCase().contains('tena') ||
+                  song.artist.toLowerCase().contains('chhorn'),
+            )
+            .toList(growable: false);
+      case 'Pop':
+        return songs
+            .where(
+              (song) =>
+                  song.artist.contains('Katy') ||
+                  song.artist.contains('Justin') ||
+                  song.artist.contains('Charlie') ||
+                  song.artist.contains('Taylor'),
+            )
+            .toList(growable: false);
+      case 'Hip-Hop':
+        return songs
+            .where(
+              (song) =>
+                  song.artist.toLowerCase().contains('tena') ||
+                  song.artist.toLowerCase().contains('khmer'),
+            )
+            .toList(growable: false);
+      case 'Charts':
+        return songs.take(10).toList(growable: false);
+      default:
+        return songs;
+    }
+  }
+
+  void _selectCategory(String category) {
+    _searchController.clear();
+    setState(() => _selectedCategory = category);
+  }
+
+  Widget _buildAlbumTile(AlbumModel album) {
+    return _buildMediaTile(
+      title: album.title,
+      subtitle: album.artist,
+      imageUrl: album.coverUrl,
+      icon: Icons.album,
+    );
+  }
+
+  Widget _buildMixTile(MixModel mix) {
+    return _buildMediaTile(
+      title: mix.title,
+      subtitle: mix.subtitle,
+      imageUrl: mix.coverUrl,
+      icon: Icons.auto_awesome,
+    );
+  }
+
+  Widget _buildRadioTile(RadioStationModel station) {
+    return _buildMediaTile(
+      title: station.name,
+      subtitle: station.featuredArtists,
+      imageUrl: station.coverUrls.first,
+      icon: Icons.podcasts,
+    );
+  }
+
+  Widget _buildMediaTile({
+    required String title,
+    required String subtitle,
+    required String imageUrl,
+    required IconData icon,
+  }) {
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              imageUrl,
+              width: 180,
+              height: 110,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 180,
+                  height: 110,
+                  color: const Color(0xFF2A2A2A),
+                  child: Icon(icon, color: Colors.white, size: 32),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[500]),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFeatureSection() {
+    final category = _selectedCategory;
+    if (category == null) return const SizedBox.shrink();
+
+    final children = switch (category) {
+      'Podcasts' => MockData.popularRadio.map(_buildRadioTile).toList(),
+      'Live Events' =>
+        MockData.trendingArtists
+            .map(
+              (artist) => _buildMediaTile(
+                title: '${artist.name} Live',
+                subtitle: 'Concert sessions and artist events',
+                imageUrl: artist.imageUrl,
+                icon: Icons.event,
+              ),
+            )
+            .toList(),
+      'Made For You' => MockData.madeForYou.map(_buildMixTile).toList(),
+      'New Releases' => MockData.newReleases.map(_buildAlbumTile).toList(),
+      'Charts' => MockData.popularAlbums.map(_buildAlbumTile).toList(),
+      _ => <Widget>[],
+    };
+
+    if (children.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(category, style: AppTextStyles.h2),
+        const SizedBox(height: 14),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Row(children: children),
+        ),
+        const SizedBox(height: 28),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim();
+    final hasSelectedCategory = _selectedCategory != null;
 
     return Scaffold(
       // Using a modern background color if applicable, otherwise relies on Theme
@@ -161,23 +313,6 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _browseLocalMusic,
-                          icon: const Icon(Icons.folder_open_rounded),
-                          label: const Text('Browse local music'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF2A2A2A),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
                       const SizedBox(height: 24),
                       if (query.isEmpty)
                         SingleChildScrollView(
@@ -194,12 +329,26 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       if (query.isEmpty) ...[
                         const SizedBox(height: 32),
-                        // 4. Section Header
+                        if (hasSelectedCategory) _buildCategoryFeatureSection(),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text("Browse all", style: AppTextStyles.h2),
-                            Icon(Icons.more_horiz, color: Colors.grey[500]),
+                            Text(
+                              hasSelectedCategory
+                                  ? "More to explore"
+                                  : "Browse all",
+                              style: AppTextStyles.h2,
+                            ),
+                            if (hasSelectedCategory)
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() => _selectedCategory = null);
+                                },
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text('Clear'),
+                              )
+                            else
+                              Icon(Icons.more_horiz, color: Colors.grey[500]),
                           ],
                         ),
                       ],
@@ -222,9 +371,13 @@ class _SearchScreenState extends State<SearchScreen> {
                     mainAxisSpacing: 16,
                   ),
                   delegate: SliverChildBuilderDelegate((context, index) {
+                    final genre = MockData.browseGenres[index];
                     return AppMotionEntry(
                       delay: Duration(milliseconds: 40 * index),
-                      child: GenreCard(genre: MockData.browseGenres[index]),
+                      child: GenreCard(
+                        genre: genre,
+                        onTap: () => _selectCategory(genre.title),
+                      ),
                     );
                   }, childCount: MockData.browseGenres.length),
                 ),
@@ -238,7 +391,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   children: [
                     Text(
                       query.isEmpty
-                          ? "Available songs"
+                          ? _selectedCategory == null
+                                ? "Available songs"
+                                : 'Songs for $_selectedCategory'
                           : 'Songs matching "$query"',
                       style: AppTextStyles.h2,
                     ),
@@ -250,11 +405,14 @@ class _SearchScreenState extends State<SearchScreen> {
                           AudifyStore.instance.songs,
                         );
                         if (songs.isEmpty) {
+                          final emptyMessage = query.isEmpty
+                              ? 'No songs available for $_selectedCategory yet.'
+                              : 'No songs found for "$query".';
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 32),
                             child: Center(
                               child: Text(
-                                'No local songs found for "$query".',
+                                emptyMessage,
                                 style: AppTextStyles.bodyLarge.copyWith(
                                   color: Colors.grey[500],
                                 ),
@@ -294,22 +452,31 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Helper widget for modern filter chips
   Widget _buildFilterChip(String label) {
+    final isSelected = _selectedCategory == label;
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(
-            0xFF2A2A2A,
-          ), // Adjust to match your AppColors theme
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.bodyLarge.copyWith(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          setState(() {
+            _selectedCategory = isSelected ? null : label;
+            _searchController.clear();
+          });
+        },
+        child: AnimatedContainer(
+          duration: AppMotion.quick,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : const Color(0xFF2A2A2A),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: isSelected ? Colors.black : Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

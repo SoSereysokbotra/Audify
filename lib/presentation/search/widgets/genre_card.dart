@@ -5,8 +5,10 @@ import '../../../core/theme/app_text_styles.dart';
 
 class GenreCard extends StatelessWidget {
   final GenreModel genre;
+  final VoidCallback? onTap;
 
-  const GenreCard({Key? key, required this.genre}) : super(key: key);
+  const GenreCard({Key? key, required this.genre, this.onTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +31,7 @@ class GenreCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: AppPressScale(
-          onTap: () {
-            // TODO: Navigate to Genre details
-          },
+          onTap: onTap,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Stack(

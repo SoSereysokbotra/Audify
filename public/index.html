@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Install Audify</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --primary: #525252;
+        --primary-hover: #363636;
+        --secondary: rgba(255, 255, 255, 0.12);
+        --secondary-hover: rgba(255, 255, 255, 0.2);
+        --text-main: #f8f8fb;
+        --text-muted: #b7b7c3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text-main);
+        background: #000; /* Fallback */
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Background Video Styles */
+      .video-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+      }
+
+      .video-wrapper video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* Dark overlay to ensure text readability over the video */
+      .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(11, 11, 15, 0.6);
+      }
+
+      main {
+        width: min(100%, 760px);
+        display: grid;
+        gap: 24px;
+        text-align: center;
+        background: rgba(20, 20, 30, 0.5);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        padding: 40px 32px;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        z-index: 1;
+      }
+
+      .logo {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        background: var(--primary);
+        color: #fff;
+        font-size: 32px;
+        font-weight: 800;
+        box-shadow: 0 8px 24px rgba(255, 51, 133, 0.4);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 32px;
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+      }
+
+      p {
+        margin: 0;
+        color: var(--text-muted);
+        line-height: 1.6;
+        font-size: 15px;
+      }
+
+      .qr {
+        width: min(62vw, 190px);
+        height: min(62vw, 190px);
+        margin: 8px auto;
+        padding: 12px;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .qr img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 6px;
+      }
+
+      .qr-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .qr-card {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .qr-card h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .qr-card p {
+        font-size: 13px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+        padding: 0 24px;
+        border-radius: 12px;
+        color: #fff;
+        background: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(62, 62, 62, 0.3);
+      }
+
+      .button-row {
+        display: grid;
+        gap: 12px;
+      }
+
+      .button.secondary {
+        background: var(--secondary);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        box-shadow: none;
+      }
+
+      .button:hover {
+        background: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(46, 46, 46, 0.4);
+      }
+
+      .button.secondary:hover {
+        background: var(--secondary-hover);
+      }
+
+      .button:active {
+        transform: translateY(0);
+      }
+
+      .link-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: -8px;
+      }
+
+      .link {
+        color: #fff;
+        word-break: break-all;
+        font-size: 13px;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+      }
+
+      .link:hover {
+        opacity: 1;
+      }
+
+      .note {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 16px;
+      }
+
+      .platform-note {
+        display: grid;
+        gap: 6px;
+        padding: 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .platform-note strong {
+        color: var(--text-main);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 28px 20px;
+        }
+
+        .qr-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="video-wrapper">
+      <video autoplay loop muted playsinline>
+        <source
+          src="https://res.cloudinary.com/dg5grwcd5/video/upload/ac_none/v1779164874/PixVerse_V6_Image_Text_360P_Minimal_blackandwh_2_vdkvng.mp4"
+          type="video/mp4"
+        />
+      </video>
+      <div class="video-overlay"></div>
+    </div>
+
+    <main>
+      <h1>Install Audify</h1>
+      <p>
+        Scan the QR that matches your phone. Android testers can install the
+        APK, while iPhone users can open the web version in Safari.
+      </p>
+
+      <div class="qr-grid">
+        <section class="qr-card">
+          <h2>Android</h2>
+          <p>Scan to download the APK.</p>
+          <div class="qr">
+            <img
+              alt="QR code for Audify Android APK"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=https%3A%2F%2Fdrive.google.com%2Fuc%3Fexport%3Ddownload%26id%3D14NiCTtFQcDZXLtNcDyugkNc6Ia8nLI3J"
+            />
+          </div>
+          <a
+            class="button"
+            href="https://drive.google.com/uc?export=download&id=14NiCTtFQcDZXLtNcDyugkNc6Ia8nLI3J"
+            >Download Android APK</a
+          >
+        </section>
+
+        <section class="qr-card">
+          <h2>iPhone</h2>
+          <p>Scan to open Audify in Safari.</p>
+          <div class="qr">
+            <img
+              alt="QR code for Audify web app"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=https%3A%2F%2Faudify-f9365.web.app%2Fapp%2F"
+            />
+          </div>
+          <a class="button secondary" href="https://audify-f9365.web.app/app/">Open Web App</a>
+        </section>
+      </div>
+
+      <div class="platform-note">
+        <span><strong>Android:</strong> download and install the APK.</span>
+        <span><strong>iPhone:</strong> use the web app in Safari.</span>
+      </div>
+
+      <div class="link-container">
+        <a
+          class="link"
+          href="https://drive.google.com/file/d/14NiCTtFQcDZXLtNcDyugkNc6Ia8nLI3J/view?usp=sharing"
+          >Alternatively, view on Google Drive</a
+        >
+      </div>
+
+      <p class="note">
+        Android may ask you to allow installing apps from your browser. The web
+        app is for iPhone testing and may behave differently from the installed
+        Android app.
+      </p>
+    </main>
+  </body>
+</html>

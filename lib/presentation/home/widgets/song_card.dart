@@ -166,6 +166,11 @@ class SongCard extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.push(context, AppMotion.route(NowPlayingScreen(song: song)));
     } catch (_) {
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.playback,
+        title: 'Playback problem',
+        message: 'Audify could not play "${song.title}". Check the audio file.',
+      );
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

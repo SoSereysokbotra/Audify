@@ -4,6 +4,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../../../core/utils/dialog_utils.dart';
+import '../../../data/audify_store.dart';
 import '../../../main.dart';
 import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
@@ -90,6 +91,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
         await user.updateDisplayName(username);
         await user.sendEmailVerification();
+        AudifyStore.instance.addNotification(
+          category: AudifyNotificationCategory.account,
+          title: 'Verification email sent',
+          message: 'Please check your inbox to verify your Audify account.',
+        );
         await user.reload();
         if (!mounted) return;
         DialogUtils.hideDialog(context);

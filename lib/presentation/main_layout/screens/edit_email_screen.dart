@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../data/audify_store.dart';
 
 class EditEmailScreen extends StatefulWidget {
   const EditEmailScreen({Key? key}) : super(key: key);
@@ -39,6 +40,11 @@ class _EditEmailScreenState extends State<EditEmailScreen> {
 
     try {
       await FirebaseAuth.instance.currentUser?.verifyBeforeUpdateEmail(email);
+      AudifyStore.instance.addNotification(
+        category: AudifyNotificationCategory.account,
+        title: 'Verification email sent',
+        message: 'Check $email to confirm your new email address.',
+      );
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
