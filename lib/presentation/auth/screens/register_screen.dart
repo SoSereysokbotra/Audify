@@ -10,6 +10,8 @@ import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_checkbox.dart';
+import '../widgets/auth_logo.dart';
+import '../widgets/social_auth_buttons.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -209,6 +211,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const AuthLogo(size: 92),
+              const SizedBox(height: 20),
               const Text("Create Account", style: AppTextStyles.h1),
               const SizedBox(height: 8),
               const Text(
@@ -281,6 +285,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 isDisabled: !isFormValid,
                 onPressed: _validateAndRegister,
               ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(height: 1, color: AppColors.border),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text("OR", style: AppTextStyles.helper),
+                  ),
+                  Expanded(
+                    child: Container(height: 1, color: AppColors.border),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const SocialAuthButtons(),
               const SizedBox(height: 24),
 
               GestureDetector(

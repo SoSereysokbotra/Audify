@@ -44,6 +44,8 @@ dependencies:
   file_picker: ^10.3.7
   cloud_firestore: ^6.4.1
   shared_preferences: ^2.3.2
+  google_sign_in: ^7.2.0
+  flutter_facebook_auth: ^7.1.6
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +57,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/app_icon_launcher.png"
+  min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -69,6 +78,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - assets/app_icon.png
+    - assets/app_icon_launcher.png
     - assets/audio/
     - assets/covers/
 

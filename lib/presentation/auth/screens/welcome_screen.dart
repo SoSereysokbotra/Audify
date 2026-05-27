@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/navigation_router.dart';
 import '../widgets/custom_button.dart';
+import '../widgets/auth_logo.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -80,13 +81,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   const SizedBox(
                     height: 40,
                   ), // Push slightly down from the very top edge
-                  AppMotionEntry(
-                    child: const Icon(
-                      Icons.music_note,
-                      color: AppColors.primaryText,
-                      size: 80,
-                    ),
-                  ),
+                  const AppMotionEntry(child: AuthLogo(size: 116)),
                   const SizedBox(height: 24),
                   AppMotionEntry(
                     delay: const Duration(milliseconds: 120),

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Audify</string>
+    <string name="facebook_app_id">34405163809129339</string>
+    <string name="facebook_client_token">REPLACE_WITH_FACEBOOK_CLIENT_TOKEN0b9c814de26283b16c3479de0b7e87a2</string>
+    <string name="fb_login_protocol_scheme">fb34405163809129339</string>
+</resources>

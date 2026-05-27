@@ -74,6 +74,15 @@ class VerifiedUserGate extends StatefulWidget {
 class _VerifiedUserGateState extends State<VerifiedUserGate> {
   late Future<bool> _isActiveUser;
 
+  bool _canEnterApp(User user) {
+    if (user.emailVerified) return true;
+    return user.providerData.any(
+      (info) =>
+          info.providerId == GoogleAuthProvider.PROVIDER_ID ||
+          info.providerId == FacebookAuthProvider.PROVIDER_ID,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -117,12 +126,12 @@ class _VerifiedUserGateState extends State<VerifiedUserGate> {
         }
 
         return snapshot.data == true
-            ? (widget.user.emailVerified
-                ? const MainLayoutScreen()
-                : VerifyEmailScreen(
-                    email: widget.user.email,
-                    mode: VerifyEmailMode.registration,
-                  ))
+            ? (_canEnterApp(widget.user)
+                  ? const MainLayoutScreen()
+                  : VerifyEmailScreen(
+                      email: widget.user.email,
+                      mode: VerifyEmailMode.registration,
+                    ))
             : const WelcomeScreen();
       },
     );

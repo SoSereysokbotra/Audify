@@ -11,6 +11,8 @@ import '../widgets/custom_input_field.dart';
 import '../widgets/custom_password_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_checkbox.dart';
+import '../widgets/auth_logo.dart';
+import '../widgets/social_auth_buttons.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -130,8 +132,8 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 60),
-              const Icon(Icons.music_note, color: AppColors.accent, size: 64),
+              const SizedBox(height: 48),
+              const AuthLogo(size: 96),
               const SizedBox(height: 16),
               const Text(
                 "Audify",
@@ -214,6 +216,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+              const SocialAuthButtons(),
               const SizedBox(height: 24),
 
               GestureDetector(

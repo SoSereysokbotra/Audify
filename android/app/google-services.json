@@ -12,7 +12,28 @@
           "package_name": "com.example.audify"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1035076894721-e0uqrjoa1k2nlonndch6ptmsd7sknto8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.audify",
+            "certificate_hash": "209b8fdcd4bcd4bd6bffc24891983a8bfd371782"
+          }
+        },
+        {
+          "client_id": "1035076894721-m6ihjbm8lfdqj0rko14j45mrnkjhgc46.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.audify",
+            "certificate_hash": "84852f3820770c20670e582d7e2d84bba057368d"
+          }
+        },
+        {
+          "client_id": "1035076894721-s9jgtjvpsch1uviq420krhkia2o017h0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBU404SI4O8Ee1md4mPEmRWB5AtcPUhq1Y"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1035076894721-s9jgtjvpsch1uviq420krhkia2o017h0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1035076894721-u81jejm5co6ucp5184jc8nvkhbn4np8e.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.audify"
+              }
+            }
+          ]
         }
       }
     }
