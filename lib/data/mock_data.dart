@@ -6,6 +6,7 @@ import '../../domain/models/artist_model.dart';
 import '../../domain/models/playlist_model.dart';
 import '../../domain/models/mix_model.dart';
 import '../../domain/models/genre_model.dart';
+import '../../domain/models/podcast_model.dart';
 
 class MockData {
   static const List<SongModel> localSongs = [
@@ -422,6 +423,167 @@ class MockData {
       colorHex: '0xFF7358FF',
       imageUrl:
           'https://i.pinimg.com/736x/7b/ab/2d/7bab2d0f6e4eb929c4097b4b9935756a.jpg',
+    ),
+  ];
+
+  static const List<ArtistModel> mockIdols = [
+    ArtistModel(
+      id: 'idol1',
+      name: 'Taylor Swift',
+      imageUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQKot_PzzDBxuuM7w9BkFJnE6i6tR75bly6eg&s',
+    ),
+    ArtistModel(
+      id: 'idol2',
+      name: 'VannDa',
+      imageUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTP9gcKFkzs_PWG1mk5o2ZLbTSi64DqSQgHtw&s',
+    ),
+    ArtistModel(
+      id: 'idol3',
+      name: 'Sombr',
+      imageUrl:
+          'https://upload.wikimedia.org/wikipedia/commons/5/53/Sombr%2C_Islington_Academy%2C_London_%28cropped%29.jpg',
+    ),
+    ArtistModel(
+      id: 'idol4',
+      name: 'Katy Perry',
+      imageUrl:
+          'https://deadline.com/wp-content/uploads/2024/02/katy-perry-american-idol.jpg',
+    ),
+    ArtistModel(
+      id: 'idol5',
+      name: 'The Weeknd',
+      imageUrl:
+          'https://media.newyorker.com/photos/5b16cfe87018915289e3cb28/master/pass/StFelix-Charlie-Puth.jpg',
+    ),
+    ArtistModel(
+      id: 'idol6',
+      name: 'Suly Pheng',
+      imageUrl: 'https://i.audiomack.com/suly-pheng/ad2cdefc0f.webp?width=456',
+    ),
+    ArtistModel(
+      id: 'idol7',
+      name: 'Cup of Joe',
+      imageUrl:
+          'https://yt3.googleusercontent.com/Bh9-8_9hC8UYAVih3G43dF2k4Xf0fFB4b6ydZERAURYKoIV3O6Gi3oHIIdo59xKgUbczuz4V=s900-c-k-c0x00ffffff-no-rj',
+    ),
+    ArtistModel(
+      id: 'idol8',
+      name: 'Passenger',
+      imageUrl:
+          'https://www.liveabout.com/thmb/Mh77rJFz_C6UdUTmYPDZEJcqUEo=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-136282985-a9824a2e0c4941b8b80185f57d69f6e4.jpg',
+    ),
+    ArtistModel(
+      id: 'idol9',
+      name: 'Charlie Puth',
+      imageUrl:
+          'https://i.pinimg.com/736x/e6/32/d5/e632d5e486c14efde36c86bc54e89d59.jpg',
+    ),
+    ArtistModel(
+      id: 'idol10',
+      name: 'Bruno Mars',
+      imageUrl:
+          'https://upload.wikimedia.org/wikipedia/en/6/62/Bruno-mars-when-i-was-your-man.jpg',
+    ),
+    ArtistModel(
+      id: 'idol11',
+      name: 'Lana Del Rey',
+      imageUrl:
+          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRhcXuUdyMAWfV-evjy6G8iDNp2M0cgSfmXug&s',
+    ),
+    ArtistModel(
+      id: 'idol12',
+      name: 'Justin Bieber',
+      imageUrl:
+          'https://m.media-amazon.com/images/M/MV5BNmRkNTExYmYtNDQzMC00Mjk1LWJlMmMtZjYyMTcwMDAzYjYwXkEyXkFqcGc@._V1_.jpg',
+    ),
+  ];
+
+  static const List<PodcastModel> podcasts = [
+    PodcastModel(
+      id: 'pod_nacht',
+      title: 'nacht',
+      category: 'Music',
+      coverUrl:
+          'https://i.pinimg.com/736x/22/13/9e/22139e119cbaf197138ac63325e5da1b.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_mj',
+      title: 'Michael Jackson A Capella',
+      category: 'Music',
+      coverUrl:
+          'https://i.pinimg.com/1200x/a1/43/25/a14325eed297bddcbf45dcd5ea2aa750.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_more_music',
+      title: 'More in Music',
+      category: 'Music',
+      coverUrl: '',
+      isCategoryTile: true,
+    ),
+    PodcastModel(
+      id: 'pod_rotten_mango',
+      title: 'Rotten Mango',
+      category: 'True Crime',
+      coverUrl:
+          'https://i.pinimg.com/1200x/e3/c5/55/e3c55503141dfa4a0589939e90e8676a.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_anything_goes',
+      title: 'anything goes with emma chamberlain',
+      category: 'Comedy',
+      coverUrl:
+          'https://i.pinimg.com/736x/ed/b0/72/edb072f1f8bde61ae3996cb05d8bf876.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_more_comedy',
+      title: 'More in Comedy',
+      category: 'Comedy',
+      coverUrl: '',
+      isCategoryTile: true,
+    ),
+    PodcastModel(
+      id: 'pod_atomic_habits',
+      title: 'Atomic Habits',
+      category: 'Books',
+      coverUrl:
+          'https://m.media-amazon.com/images/I/81F90H7hnML._UF1000,1000_QL80_.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_nepali_story',
+      title: 'Nepali Audiobook Series',
+      category: 'Books',
+      coverUrl:
+          'https://i.pinimg.com/736x/1b/27/25/1b2725a953afd02429bafc3bdbecd707.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_more_books',
+      title: 'More in Books',
+      category: 'Books',
+      coverUrl: '',
+      isCategoryTile: true,
+    ),
+    PodcastModel(
+      id: 'pod_ted_daily',
+      title: 'TED Talks Daily',
+      category: 'Education',
+      coverUrl:
+          'https://i.pinimg.com/736x/d2/fa/24/d2fa243e10fdd57fe416e168d3a457e9.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_good_people',
+      title: 'Hello Good People',
+      category: 'Business',
+      coverUrl:
+          'https://i.pinimg.com/736x/8e/53/30/8e5330de74b1edacc3f64937756e2bee.jpg',
+    ),
+    PodcastModel(
+      id: 'pod_more_business',
+      title: 'More in Business',
+      category: 'Business',
+      coverUrl: '',
+      isCategoryTile: true,
     ),
   ];
 }

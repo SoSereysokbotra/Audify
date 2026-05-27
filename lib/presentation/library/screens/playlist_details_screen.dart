@@ -7,6 +7,7 @@ import '../../../data/audify_store.dart';
 import '../../../data/local_audio_player.dart';
 import '../../../domain/models/song_model.dart';
 import '../../player/screens/now_playing_screen.dart';
+import '../widgets/playlist_cover_art.dart';
 
 class PlaylistDetailsScreen extends StatelessWidget {
   final String playlistId;
@@ -57,14 +58,11 @@ class PlaylistDetailsScreen extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      playlist.coverUrl,
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    ),
+                  PlaylistCoverArt(
+                    coverUrl: playlist.coverUrl,
+                    songs: songs,
+                    size: 120,
+                    borderRadius: 8,
                   ),
                   const SizedBox(width: 20),
                   Expanded(
@@ -116,39 +114,43 @@ class PlaylistDetailsScreen extends StatelessWidget {
                   ),
                 )
               else
-                ...songs.asMap().entries.map(
-                  (entry) {
-                    final index = entry.key;
-                    final song = entry.value;
-                    return _PlaylistSongTile(
-                      song: song,
-                      onFavorite: () => store.toggleFavorite(song.id),
-                      isFavorite: store.isFavorite(song.id),
-                      onRemove: () {
-                        store.removeSongFromPlaylist(playlist.id, song.id);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Removed ${song.title}')),
+                ...songs.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final song = entry.value;
+                  return _PlaylistSongTile(
+                    song: song,
+                    onFavorite: () => store.toggleFavorite(song.id),
+                    isFavorite: store.isFavorite(song.id),
+                    onRemove: () {
+                      store.removeSongFromPlaylist(playlist.id, song.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Removed ${song.title}')),
+                      );
+                    },
+                    onPlay: () async {
+                      try {
+                        await LocalAudioPlayer.instance.playQueue(
+                          songs,
+                          startIndex: index,
                         );
-                      },
-                      onPlay: () async {
-                        try {
-                          await LocalAudioPlayer.instance.playQueue(songs, startIndex: index);
-                          if (!context.mounted) return;
-                          Navigator.push(context, AppMotion.route(NowPlayingScreen(song: song)));
-                        } catch (_) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Add the file ${song.localAudioPath ?? 'for this song'} first.',
-                              ),
+                        if (!context.mounted) return;
+                        Navigator.push(
+                          context,
+                          AppMotion.route(NowPlayingScreen(song: song)),
+                        );
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Add the file ${song.localAudioPath ?? 'for this song'} first.',
                             ),
-                          );
-                        }
-                      },
-                    );
-                  },
-                ),
+                          ),
+                        );
+                      }
+                    },
+                  );
+                }),
             ],
           ),
         );

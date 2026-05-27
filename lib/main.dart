@@ -7,6 +7,8 @@ import 'core/theme/app_colors.dart';
 import 'presentation/auth/screens/welcome_screen.dart';
 import 'presentation/main_layout/main_layout_screen.dart';
 import 'presentation/auth/screens/verify_email_screen.dart';
+import 'presentation/onboarding/onboarding_wrapper_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,7 +74,7 @@ class VerifiedUserGate extends StatefulWidget {
 }
 
 class _VerifiedUserGateState extends State<VerifiedUserGate> {
-  late Future<bool> _isActiveUser;
+  late Future<(bool, bool)> _isActiveUserAndOnboarding;
 
   bool _canEnterApp(User user) {
     if (user.emailVerified) return true;
@@ -86,38 +88,45 @@ class _VerifiedUserGateState extends State<VerifiedUserGate> {
   @override
   void initState() {
     super.initState();
-    _isActiveUser = _verifyUserStillExists();
+    _isActiveUserAndOnboarding = _verifyUserStillExists();
   }
 
   @override
   void didUpdateWidget(VerifiedUserGate oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.user.uid != widget.user.uid) {
-      _isActiveUser = _verifyUserStillExists();
+      _isActiveUserAndOnboarding = _verifyUserStillExists();
     }
   }
 
-  Future<bool> _verifyUserStillExists() async {
+  Future<(bool, bool)> _verifyUserStillExists() async {
     try {
       await widget.user.reload();
-      return FirebaseAuth.instance.currentUser != null;
+      if (FirebaseAuth.instance.currentUser == null) return (false, false);
+
+      final doc = await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).get();
+      bool hasCompletedOnboarding = false;
+      if (doc.exists) {
+        hasCompletedOnboarding = doc.data()?['hasCompletedOnboarding'] as bool? ?? false;
+      }
+      return (true, hasCompletedOnboarding);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' ||
           e.code == 'user-disabled' ||
           e.code == 'user-token-expired' ||
           e.code == 'invalid-user-token') {
         await FirebaseAuth.instance.signOut();
-        return false;
+        return (false, false);
       }
 
-      return FirebaseAuth.instance.currentUser != null;
+      return (FirebaseAuth.instance.currentUser != null, false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isActiveUser,
+    return FutureBuilder<(bool, bool)>(
+      future: _isActiveUserAndOnboarding,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Scaffold(
@@ -125,14 +134,25 @@ class _VerifiedUserGateState extends State<VerifiedUserGate> {
           );
         }
 
-        return snapshot.data == true
-            ? (_canEnterApp(widget.user)
-                  ? const MainLayoutScreen()
-                  : VerifyEmailScreen(
-                      email: widget.user.email,
-                      mode: VerifyEmailMode.registration,
-                    ))
-            : const WelcomeScreen();
+        final userExists = snapshot.data!.$1;
+        final hasCompletedOnboarding = snapshot.data!.$2;
+
+        if (!userExists) {
+          return const WelcomeScreen();
+        }
+
+        if (!_canEnterApp(widget.user)) {
+          return VerifyEmailScreen(
+            email: widget.user.email,
+            mode: VerifyEmailMode.registration,
+          );
+        }
+
+        if (!hasCompletedOnboarding) {
+          return const OnboardingWrapperScreen();
+        }
+
+        return const MainLayoutScreen();
       },
     );
   }

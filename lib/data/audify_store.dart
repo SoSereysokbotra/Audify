@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../domain/models/playlist_model.dart';
+import '../domain/models/podcast_model.dart';
 import '../domain/models/song_model.dart';
 import 'mock_data.dart';
 
@@ -11,22 +12,41 @@ class UserProfileData {
   final String displayName;
   final String bio;
   final String? imagePath;
+  final DateTime? birthday;
+  final List<String> favoriteIdols;
+  final List<String> featuredCollaborativePlaylistIds;
+  final bool hasCompletedOnboarding;
 
   const UserProfileData({
     required this.displayName,
     required this.bio,
     this.imagePath,
+    this.birthday,
+    this.favoriteIdols = const [],
+    this.featuredCollaborativePlaylistIds = const [],
+    this.hasCompletedOnboarding = false,
   });
 
   UserProfileData copyWith({
     String? displayName,
     String? bio,
     String? imagePath,
+    DateTime? birthday,
+    List<String>? favoriteIdols,
+    List<String>? featuredCollaborativePlaylistIds,
+    bool? hasCompletedOnboarding,
   }) {
     return UserProfileData(
       displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
       imagePath: imagePath ?? this.imagePath,
+      birthday: birthday ?? this.birthday,
+      favoriteIdols: favoriteIdols ?? this.favoriteIdols,
+      featuredCollaborativePlaylistIds:
+          featuredCollaborativePlaylistIds ??
+          this.featuredCollaborativePlaylistIds,
+      hasCompletedOnboarding:
+          hasCompletedOnboarding ?? this.hasCompletedOnboarding,
     );
   }
 }
@@ -84,6 +104,24 @@ class ListeningHistoryEntry {
   final DateTime playedAt;
 
   const ListeningHistoryEntry({required this.song, required this.playedAt});
+}
+
+class UserPodcast {
+  final String id;
+  final String title;
+  final String description;
+  final String coverUrl;
+  final String sourcePath;
+  final DateTime uploadedAt;
+
+  const UserPodcast({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.coverUrl,
+    required this.sourcePath,
+    required this.uploadedAt,
+  });
 }
 
 enum AudifyNotificationCategory {
@@ -146,12 +184,19 @@ class AudifyStore extends ChangeNotifier {
   void _onAuthStateChanged(User? user) {
     _currentUser = user;
     if (user != null) {
+      _loadProfileFromFirestore();
       _loadFavoritesFromFirestore();
       _loadPlaylistsFromFirestore();
+      _loadImportedSongsFromFirestore();
+      _loadPodcastsFromFirestore();
       _loadNotificationsFromFirestore();
     } else {
       _favoriteSongIds.clear();
       _playlists.clear();
+      _songs
+        ..clear()
+        ..addAll(MockData.localSongs);
+      _podcasts.clear();
       _notifications.clear();
       notifyListeners();
     }
@@ -217,6 +262,158 @@ class AudifyStore extends ChangeNotifier {
     isPrivate: m['isPrivate'] as bool,
     songIds: List<String>.from(m['songIds'] as List<dynamic>),
   );
+
+  Map<String, dynamic> _songToJson(SongModel song) => {
+    'id': song.id,
+    'title': song.title,
+    'artist': song.artist,
+    'coverUrl': song.coverUrl,
+    'localAudioPath': song.localAudioPath,
+  };
+
+  SongModel _songFromJson(Map<String, dynamic> data) {
+    return SongModel(
+      id:
+          data['id'] as String? ??
+          'local_${DateTime.now().microsecondsSinceEpoch}',
+      title: data['title'] as String? ?? 'Untitled',
+      artist: data['artist'] as String? ?? 'Local storage',
+      coverUrl:
+          data['coverUrl'] as String? ?? 'https://picsum.photos/id/100/400/400',
+      localAudioPath: data['localAudioPath'] as String? ?? '',
+    );
+  }
+
+  bool _isImportedSong(SongModel song) {
+    return song.id.startsWith('local_') ||
+        !MockData.localSongs.any((mockSong) => mockSong.id == song.id);
+  }
+
+  Future<void> _loadImportedSongsFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (!doc.exists) return;
+
+      final songsData = doc.data()?['importedSongs'] as List<dynamic>?;
+      if (songsData == null) return;
+
+      final importedSongs = songsData
+          .map((item) => _songFromJson(Map<String, dynamic>.from(item as Map)))
+          .where((song) => song.localAudioPath?.trim().isNotEmpty == true)
+          .toList(growable: false);
+
+      _songs
+        ..clear()
+        ..addAll(MockData.localSongs);
+
+      for (final song in importedSongs) {
+        final alreadyLoaded = _songs.any(
+          (existing) =>
+              existing.id == song.id ||
+              existing.localAudioPath == song.localAudioPath,
+        );
+        if (!alreadyLoaded) {
+          _songs.insert(0, song);
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading imported songs from Firestore: $e");
+    }
+  }
+
+  Future<void> _syncImportedSongsToFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'importedSongs': _songs
+                .where(_isImportedSong)
+                .map(_songToJson)
+                .toList(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing imported songs to Firestore: $e");
+    }
+  }
+
+  Map<String, dynamic> _podcastToJson(UserPodcast podcast) => {
+    'id': podcast.id,
+    'title': podcast.title,
+    'description': podcast.description,
+    'coverUrl': podcast.coverUrl,
+    'sourcePath': podcast.sourcePath,
+    'uploadedAt': Timestamp.fromDate(podcast.uploadedAt),
+  };
+
+  UserPodcast _podcastFromJson(Map<String, dynamic> data) {
+    final uploadedAtValue = data['uploadedAt'];
+    final uploadedAt = uploadedAtValue is Timestamp
+        ? uploadedAtValue.toDate()
+        : DateTime.tryParse(uploadedAtValue?.toString() ?? '') ??
+              DateTime.now();
+
+    return UserPodcast(
+      id:
+          data['id'] as String? ??
+          'podcast_${DateTime.now().microsecondsSinceEpoch}',
+      title: data['title'] as String? ?? 'Untitled podcast',
+      description: data['description'] as String? ?? 'Podcast',
+      coverUrl: data['coverUrl'] as String? ?? '',
+      sourcePath: data['sourcePath'] as String? ?? '',
+      uploadedAt: uploadedAt,
+    );
+  }
+
+  Future<void> _loadPodcastsFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (!doc.exists) return;
+
+      final podcastsData = doc.data()?['podcasts'] as List<dynamic>?;
+      if (podcastsData == null) return;
+
+      final loaded =
+          podcastsData
+              .map(
+                (item) =>
+                    _podcastFromJson(Map<String, dynamic>.from(item as Map)),
+              )
+              .toList()
+            ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+
+      _podcasts
+        ..clear()
+        ..addAll(loaded);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error loading podcasts from Firestore: $e");
+    }
+  }
+
+  Future<void> _syncPodcastsToFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'podcasts': _podcasts.map(_podcastToJson).toList(),
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing podcasts to Firestore: $e");
+    }
+  }
 
   Future<void> _loadFavoritesFromFirestore() async {
     if (_currentUser == null) return;
@@ -338,6 +535,7 @@ class AudifyStore extends ChangeNotifier {
   final List<SongModel> _songs = List.from(MockData.localSongs);
 
   final List<UserPlaylist> _playlists = [];
+  final List<UserPodcast> _podcasts = [];
   final List<ListeningHistoryEntry> _listeningHistory = [];
   final Set<String> _favoriteSongIds = {};
   final List<AudifyNotification> _notifications = [];
@@ -346,6 +544,7 @@ class AudifyStore extends ChangeNotifier {
 
   List<SongModel> get songs => List.unmodifiable(_songs);
   List<UserPlaylist> get playlists => List.unmodifiable(_playlists);
+  List<UserPodcast> get podcasts => List.unmodifiable(_podcasts);
   List<ListeningHistoryEntry> get listeningHistory =>
       List.unmodifiable(_listeningHistory);
   List<String> get favoriteSongIds => List.unmodifiable(_favoriteSongIds);
@@ -423,7 +622,85 @@ class AudifyStore extends ChangeNotifier {
             : '$addedCount local songs are now available in your library.',
       );
       notifyListeners();
+      _syncImportedSongsToFirestore();
     }
+    return addedCount;
+  }
+
+  int uploadPodcastFiles(List<String> paths) {
+    var addedCount = 0;
+
+    for (final path in paths) {
+      final trimmedPath = path.trim();
+      if (trimmedPath.isEmpty) continue;
+      final alreadyUploaded = _podcasts.any(
+        (podcast) => podcast.sourcePath == trimmedPath,
+      );
+      if (alreadyUploaded) continue;
+
+      final title = _songTitleFromPath(trimmedPath);
+      _podcasts.insert(
+        0,
+        UserPodcast(
+          id: 'podcast_${DateTime.now().microsecondsSinceEpoch}_$addedCount',
+          title: title.isEmpty ? _fileNameFromPath(trimmedPath) : title,
+          description: 'Podcast upload',
+          coverUrl: '',
+          sourcePath: trimmedPath,
+          uploadedAt: DateTime.now(),
+        ),
+      );
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      addNotification(
+        category: AudifyNotificationCategory.music,
+        title: addedCount == 1 ? 'Podcast uploaded' : 'Podcasts uploaded',
+        message: addedCount == 1
+            ? 'A podcast is now available in your library.'
+            : '$addedCount podcasts are now available in your library.',
+      );
+      notifyListeners();
+      _syncPodcastsToFirestore();
+    }
+
+    return addedCount;
+  }
+
+  Future<int> addPodcastSelections(List<PodcastModel> podcasts) async {
+    var addedCount = 0;
+
+    for (final podcast in podcasts) {
+      final alreadyAdded = _podcasts.any((item) => item.id == podcast.id);
+      if (alreadyAdded) continue;
+
+      _podcasts.insert(
+        0,
+        UserPodcast(
+          id: podcast.id,
+          title: podcast.title,
+          description: podcast.category,
+          coverUrl: podcast.coverUrl,
+          sourcePath: 'catalog:${podcast.id}',
+          uploadedAt: DateTime.now(),
+        ),
+      );
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      addNotification(
+        category: AudifyNotificationCategory.music,
+        title: addedCount == 1 ? 'Podcast added' : 'Podcasts added',
+        message: addedCount == 1
+            ? 'A podcast is now available in your library.'
+            : '$addedCount podcasts are now available in your library.',
+      );
+      notifyListeners();
+      await _syncPodcastsToFirestore();
+    }
+
     return addedCount;
   }
 
@@ -636,6 +913,99 @@ class AudifyStore extends ChangeNotifier {
       message: 'Your Audify profile changes were saved.',
     );
     notifyListeners();
+  }
+
+  Future<void> setFeaturedCollaborativePlaylistIds(List<String> ids) async {
+    final uniqueIds = ids.toSet().toList(growable: false);
+    _profile = _profile.copyWith(featuredCollaborativePlaylistIds: uniqueIds);
+    notifyListeners();
+
+    if (_currentUser == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'featuredCollaborativePlaylistIds': uniqueIds,
+          }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing featured collaborative playlists: $e");
+    }
+  }
+
+  Future<void> setFavoriteIdolIds(List<String> idolIds) async {
+    final uniqueIds = idolIds.toSet().toList(growable: false);
+    _profile = _profile.copyWith(favoriteIdols: uniqueIds);
+    notifyListeners();
+
+    if (_currentUser == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({'favoriteIdols': uniqueIds}, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error syncing favorite idols: $e");
+    }
+  }
+
+  Future<void> completeOnboarding({
+    required DateTime birthday,
+    required List<String> idolIds,
+  }) async {
+    if (_currentUser == null) return;
+
+    _profile = _profile.copyWith(
+      birthday: birthday,
+      favoriteIdols: idolIds,
+      hasCompletedOnboarding: true,
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .set({
+            'birthday': Timestamp.fromDate(birthday),
+            'favoriteIdols': idolIds,
+            'hasCompletedOnboarding': true,
+          }, SetOptions(merge: true));
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error syncing onboarding data: $e");
+    }
+  }
+
+  Future<void> _loadProfileFromFirestore() async {
+    if (_currentUser == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        final bdayTimestamp = data['birthday'] as Timestamp?;
+
+        _profile = _profile.copyWith(
+          hasCompletedOnboarding:
+              data['hasCompletedOnboarding'] as bool? ?? false,
+          birthday: bdayTimestamp?.toDate(),
+          favoriteIdols:
+              (data['favoriteIdols'] as List<dynamic>?)?.cast<String>() ?? [],
+          featuredCollaborativePlaylistIds:
+              (data['featuredCollaborativePlaylistIds'] as List<dynamic>?)
+                  ?.cast<String>() ??
+              [],
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error loading profile: $e");
+    }
   }
 
   void addNotification({

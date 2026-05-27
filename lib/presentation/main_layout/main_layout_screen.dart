@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/motion/app_motion.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/create_options_sheet.dart';
 import '../home/screens/home_screen.dart';
 import '../search/screens/search_screen.dart';
 import '../library/screens/library_screen.dart';
@@ -25,6 +26,20 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
     const LibraryScreen(),
     const ProfileScreen(showBackButton: false),
   ];
+
+  int get _selectedTabIndex =>
+      _currentIndex >= 2 ? _currentIndex + 1 : _currentIndex;
+
+  void _onTabSelected(int index) {
+    if (index == 2) {
+      CreateOptionsSheet.show(context);
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index > 2 ? index - 1 : index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +90,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     type: BottomNavigationBarType.fixed,
-                    currentIndex: _currentIndex,
+                    currentIndex: _selectedTabIndex,
                     selectedItemColor: Colors.white,
                     unselectedItemColor: AppColors.secondaryText,
                     selectedLabelStyle: AppTextStyles.helper.copyWith(
@@ -85,11 +100,7 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                     unselectedLabelStyle: AppTextStyles.helper.copyWith(
                       fontSize: 10,
                     ),
-                    onTap: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
+                    onTap: _onTabSelected,
                     items: const [
                       BottomNavigationBarItem(
                         icon: Icon(Icons.home_filled),
@@ -98,6 +109,10 @@ class _MainLayoutScreenState extends State<MainLayoutScreen> {
                       BottomNavigationBarItem(
                         icon: Icon(Icons.search),
                         label: "Search",
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.add_circle),
+                        label: "Create",
                       ),
                       BottomNavigationBarItem(
                         icon: Icon(Icons.library_music),

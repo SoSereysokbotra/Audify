@@ -12,7 +12,7 @@ import '../../../domain/models/song_model.dart';
 import 'immersive_playlist_screen.dart';
 
 class CreatePlaylistScreen extends StatefulWidget {
-  const CreatePlaylistScreen({Key? key}) : super(key: key);
+  const CreatePlaylistScreen({super.key});
 
   @override
   State<CreatePlaylistScreen> createState() => _CreatePlaylistScreenState();
@@ -28,7 +28,8 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
 
   bool _isPrivate = false;
   String _searchQuery = '';
-  final List<int> _selectedTrackIndices = [];
+  bool _showFavoritesOnly = false;
+  final Set<String> _selectedTrackIds = {};
 
   late AnimationController _coverPulseController;
   late AnimationController _fadeController;
@@ -53,8 +54,11 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
   List<SongModel> get _allTracks => AudifyStore.instance.songs;
 
   List<SongModel> get _filteredTracks {
-    if (_searchQuery.isEmpty) return _allTracks;
-    return _allTracks.where((t) {
+    final tracks = _showFavoritesOnly
+        ? AudifyStore.instance.favoriteSongs
+        : _allTracks;
+    if (_searchQuery.isEmpty) return tracks;
+    return tracks.where((t) {
       final q = _searchQuery.toLowerCase();
       return t.title.toLowerCase().contains(q) ||
           t.artist.toLowerCase().contains(q);
@@ -98,17 +102,12 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
       _nameFocus.requestFocus();
       return;
     }
-    final selectedSongIds = _selectedTrackIndices
-        .map((index) => _allTracks[index].id)
-        .toList();
-
     AudifyStore.instance.createPlaylist(
       title: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
-      songIds: selectedSongIds,
+      songIds: _selectedTrackIds.toList(),
       isPrivate: _isPrivate,
-      coverUrl:
-          'https://picsum.photos/id/${111 + AudifyStore.instance.playlists.length}/200/200',
+      coverUrl: _coverImage?.path ?? '',
     );
 
     _showSnackBar('Playlist "${_nameController.text.trim()}" created');
@@ -190,6 +189,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
                   SliverToBoxAdapter(child: _buildFormSection()),
                   SliverToBoxAdapter(child: _buildPrivacyToggle()),
                   SliverToBoxAdapter(child: _buildDivider('Add Songs')),
+                  SliverToBoxAdapter(child: _buildSongSourceToggle()),
                   SliverToBoxAdapter(child: _buildSearchBar()),
                   _buildTrackList(),
                   const SliverToBoxAdapter(child: SizedBox(height: 140)),
@@ -635,15 +635,59 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
     );
   }
 
-  SliverList _buildTrackList() {
+  Widget _buildSongSourceToggle() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Row(
+          children: [
+            _SongSourceButton(
+              label: 'All Songs',
+              icon: Icons.library_music_rounded,
+              isSelected: !_showFavoritesOnly,
+              onTap: () => setState(() => _showFavoritesOnly = false),
+            ),
+            _SongSourceButton(
+              label: 'Favorites',
+              icon: Icons.favorite_rounded,
+              isSelected: _showFavoritesOnly,
+              onTap: () => setState(() => _showFavoritesOnly = true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrackList() {
     final tracks = _filteredTracks;
+    if (tracks.isEmpty) {
+      final message = _showFavoritesOnly
+          ? 'No favorite songs found. Save songs to favorites first.'
+          : 'No songs found.';
+
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodySmall.copyWith(color: Colors.white54),
+          ),
+        ),
+      );
+    }
+
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final track = tracks[index];
-        final isSelected = _selectedTrackIndices.contains(
-          _allTracks.indexOf(track),
-        );
-        final trackIndex = _allTracks.indexOf(track);
+        final isSelected = _selectedTrackIds.contains(track.id);
 
         return _TrackListItem(
           track: track,
@@ -653,9 +697,9 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
             HapticFeedback.selectionClick();
             setState(() {
               if (isSelected) {
-                _selectedTrackIndices.remove(trackIndex);
+                _selectedTrackIds.remove(track.id);
               } else {
-                _selectedTrackIndices.add(trackIndex);
+                _selectedTrackIds.add(track.id);
               }
             });
           },
@@ -665,7 +709,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
   }
 
   Widget _buildFloatingBottomButton() {
-    final count = _selectedTrackIndices.length;
+    final count = _selectedTrackIds.length;
     const primaryColor = Colors.white;
 
     return ClipRRect(
@@ -730,6 +774,55 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 // Track List Item
 // ─────────────────────────────────────────────────────────────────────────────
+
+class _SongSourceButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _SongSourceButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? Colors.black : Colors.white54,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: isSelected ? Colors.black : Colors.white70,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _TrackListItem extends StatelessWidget {
   final SongModel track;
@@ -833,7 +926,7 @@ class _TrackListItem extends StatelessWidget {
               ),
               child: Icon(
                 Icons.check_rounded,
-                color: isSelected ? Colors.white : Colors.transparent,
+                color: isSelected ? Colors.black : Colors.transparent,
                 size: 18,
               ),
             ),

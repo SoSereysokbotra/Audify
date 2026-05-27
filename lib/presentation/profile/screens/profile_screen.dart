@@ -8,7 +8,12 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
+import '../../../data/collaborative_store.dart';
+import '../../../domain/models/collaborative_playlist_model.dart';
+import '../../../domain/models/song_model.dart';
+import '../../library/screens/collaborative_playlist_screen.dart';
 import '../../library/screens/playlist_details_screen.dart';
+import '../../library/widgets/playlist_cover_art.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -146,14 +151,179 @@ class ProfileScreen extends StatelessWidget {
         .join(', ');
   }
 
+  List<CollaborativePlaylistModel> _createdCollaborativePlaylists(User? user) {
+    final userId = user?.uid;
+    if (userId == null) return [];
+
+    return CollaborativeStore.instance.collaborativePlaylists
+        .where((playlist) => playlist.creatorId == userId)
+        .toList(growable: false);
+  }
+
+  List<CollaborativePlaylistModel> _featuredCollaborativePlaylists(
+    User? user,
+    UserProfileData profile,
+  ) {
+    final created = _createdCollaborativePlaylists(user);
+    final selectedIds = profile.featuredCollaborativePlaylistIds;
+    final byId = {for (final playlist in created) playlist.id: playlist};
+
+    return selectedIds
+        .map((id) => byId[id])
+        .whereType<CollaborativePlaylistModel>()
+        .toList(growable: false);
+  }
+
+  List<SongModel> _songsForCollaborativePlaylist(
+    CollaborativePlaylistModel playlist,
+  ) {
+    return playlist.songs
+        .map((song) => AudifyStore.instance.songById(song.songId))
+        .whereType<SongModel>()
+        .toList(growable: false);
+  }
+
+  void _showCollaborativePlaylistPicker(
+    BuildContext context, {
+    required List<CollaborativePlaylistModel> createdPlaylists,
+    required List<String> selectedIds,
+  }) {
+    final draftSelection = selectedIds.toSet();
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      showDragHandle: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Show on profile', style: AppTextStyles.h2),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose collaborative playlists you created.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (createdPlaylists.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: Text(
+                          'Create a collaborative playlist first.',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: createdPlaylists.length,
+                          itemBuilder: (context, index) {
+                            final playlist = createdPlaylists[index];
+                            final isSelected = draftSelection.contains(
+                              playlist.id,
+                            );
+
+                            return CheckboxListTile(
+                              value: isSelected,
+                              activeColor: AppColors.accent,
+                              checkColor: AppColors.background,
+                              contentPadding: EdgeInsets.zero,
+                              controlAffinity: ListTileControlAffinity.trailing,
+                              title: Text(
+                                playlist.name,
+                                style: AppTextStyles.bodyLarge,
+                              ),
+                              subtitle: Text(
+                                '${playlist.songs.length} songs',
+                                style: AppTextStyles.bodySmall,
+                              ),
+                              secondary: PlaylistCoverArt(
+                                coverUrl: playlist.coverUrl,
+                                songs: _songsForCollaborativePlaylist(playlist),
+                                size: 52,
+                                borderRadius: 8,
+                              ),
+                              onChanged: (value) {
+                                setSheetState(() {
+                                  if (value == true) {
+                                    draftSelection.add(playlist.id);
+                                  } else {
+                                    draftSelection.remove(playlist.id);
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await AudifyStore.instance
+                              .setFeaturedCollaborativePlaylistIds(
+                                draftSelection.toList(),
+                              );
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accent,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Save',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: AudifyStore.instance,
+      listenable: Listenable.merge([
+        AudifyStore.instance,
+        CollaborativeStore.instance,
+      ]),
       builder: (context, _) {
         final store = AudifyStore.instance;
         final profile = store.profile;
         final user = FirebaseAuth.instance.currentUser;
+        final createdCollaborativePlaylists = _createdCollaborativePlaylists(
+          user,
+        );
+        final featuredCollaborativePlaylists = _featuredCollaborativePlaylists(
+          user,
+          profile,
+        );
+        final profilePlaylistCount =
+            store.playlists.length + featuredCollaborativePlaylists.length;
         final displayName = user?.displayName?.trim().isNotEmpty == true
             ? user!.displayName!
             : profile.displayName;
@@ -318,7 +488,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            store.playlists.length.toString(),
+                            profilePlaylistCount.toString(),
                             style: AppTextStyles.bodyLarge.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -376,9 +546,28 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 20),
                       const Divider(color: AppColors.border, height: 1),
                       const SizedBox(height: 32),
-                      const Text('Playlists', style: AppTextStyles.h2),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text('Playlists', style: AppTextStyles.h2),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => _showCollaborativePlaylistPicker(
+                              context,
+                              createdPlaylists: createdCollaborativePlaylists,
+                              selectedIds:
+                                  profile.featuredCollaborativePlaylistIds,
+                            ),
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text('Collaborative'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primaryText,
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
-                      if (store.playlists.isEmpty)
+                      if (profilePlaylistCount == 0)
                         const Text(
                           'Create playlists to show them on your profile.',
                           style: AppTextStyles.bodySmall,
@@ -390,22 +579,63 @@ class ProfileScreen extends StatelessWidget {
               SliverPadding(
                 padding: const EdgeInsets.only(bottom: 40.0),
                 sliver: SliverList.builder(
-                  itemCount: store.playlists.length,
+                  itemCount: profilePlaylistCount,
                   itemBuilder: (context, index) {
-                    final playlist = store.playlists[index];
+                    if (index < featuredCollaborativePlaylists.length) {
+                      final playlist = featuredCollaborativePlaylists[index];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 8.0,
+                        ),
+                        leading: PlaylistCoverArt(
+                          coverUrl: playlist.coverUrl,
+                          songs: _songsForCollaborativePlaylist(playlist),
+                          size: 60,
+                          borderRadius: 8,
+                        ),
+                        title: Text(
+                          playlist.name,
+                          style: AppTextStyles.bodyLarge,
+                        ),
+                        subtitle: Text(
+                          playlist.description.isEmpty
+                              ? 'Collaborative playlist ${playlist.songs.length} songs'
+                              : playlist.description,
+                          style: AppTextStyles.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: const Icon(
+                          Icons.groups_2_outlined,
+                          color: AppColors.secondaryText,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            AppMotion.route(
+                              CollaborativePlaylistScreen(
+                                playlistId: playlist.id,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    final normalPlaylistIndex =
+                        index - featuredCollaborativePlaylists.length;
+                    final playlist = store.playlists[normalPlaylistIndex];
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 24.0,
                         vertical: 8.0,
                       ),
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8.0),
-                        child: Image.network(
-                          playlist.coverUrl,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                        ),
+                      leading: PlaylistCoverArt(
+                        coverUrl: playlist.coverUrl,
+                        songs: store.songsForPlaylist(playlist.id),
+                        size: 60,
+                        borderRadius: 8,
                       ),
                       title: Text(
                         playlist.title,

@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/utils/create_options_sheet.dart';
 import '../../../core/utils/profile_image_provider.dart';
 import '../../../data/audify_store.dart';
+import '../../../data/collaborative_store.dart';
+import '../../../data/mock_data.dart';
+import '../../../domain/models/artist_model.dart';
 import '../../home/widgets/song_card.dart';
 import '../../main_layout/widgets/profile_drawer.dart';
+import 'album_details_screen.dart';
+import 'choose_artists_screen.dart';
+import 'choose_podcasts_screen.dart';
+import 'collaborative_playlist_screen.dart';
 import '../widgets/library_filter_pills.dart';
 import '../widgets/library_list_item.dart';
-import 'create_playlist_screen.dart';
+import '../widgets/playlist_cover_art.dart';
 import 'favorite_songs_screen.dart';
 import 'playlist_details_screen.dart';
 
@@ -32,62 +41,70 @@ class _LibraryScreenState extends State<LibraryScreen> {
     super.dispose();
   }
 
-  void _showAddOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+  Future<List<String>> _pickAudioFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.audio,
+      allowMultiple: true,
+    );
+    if (result == null) return [];
+    return result.files.map((file) => file.path).whereType<String>().toList();
+  }
+
+  Future<void> _handleImportMusic() async {
+    final paths = await _pickAudioFiles();
+    if (!mounted || paths.isEmpty) return;
+
+    final count = AudifyStore.instance.importLocalAudioFiles(paths);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count == 0
+              ? 'Those songs are already in your library.'
+              : count == 1
+              ? 'Imported 1 song.'
+              : 'Imported $count songs.',
+        ),
       ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 16.0, bottom: 32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.music_note,
-                  color: AppColors.primaryText,
-                  size: 28,
-                ),
-                title: const Text('Playlist', style: AppTextStyles.bodyLarge),
-                subtitle: Text(
-                  'Build a playlist with songs or episodes',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryText,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    AppMotion.route(
-                      const CreatePlaylistScreen(),
-                      duration: AppMotion.relaxed,
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.people,
-                  color: AppColors.primaryText,
-                  size: 28,
-                ),
-                title: const Text('Blend', style: AppTextStyles.bodyLarge),
-                subtitle: Text(
-                  'Combine tastes in a shared playlist with friends',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryText,
-                  ),
-                ),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        );
-      },
+    );
+  }
+
+  void _openPodcastPicker() {
+    Navigator.push(
+      context,
+      AppMotion.route(
+        const ChoosePodcastsScreen(),
+        duration: AppMotion.relaxed,
+      ),
+    );
+  }
+
+  void _openArtistsPicker() {
+    Navigator.push(
+      context,
+      AppMotion.route(const ChooseArtistsScreen(), duration: AppMotion.relaxed),
+    );
+  }
+
+  List<ArtistModel> _selectedIdolsFor(AudifyStore store, String query) {
+    final selectedIds = store.profile.favoriteIdols.toSet();
+    return MockData.mockIdols
+        .where((idol) {
+          if (!selectedIds.contains(idol.id)) return false;
+          if (query.isEmpty) return true;
+          return idol.name.toLowerCase().contains(query);
+        })
+        .toList(growable: false);
+  }
+
+  Widget _buildActionLeading(IconData icon) {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: AppColors.primaryText),
     );
   }
 
@@ -208,7 +225,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add, color: Colors.white),
-                          onPressed: () => _showAddOptions(context),
+                          onPressed: () => CreateOptionsSheet.show(context),
                         ),
                       ],
                     ],
@@ -268,7 +285,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             SliverToBoxAdapter(
               child: ListenableBuilder(
-                listenable: AudifyStore.instance,
+                listenable: Listenable.merge([
+                  AudifyStore.instance,
+                  CollaborativeStore.instance,
+                ]),
                 builder: (context, _) {
                   final store = AudifyStore.instance;
                   final query = _searchController.text.trim().toLowerCase();
@@ -277,13 +297,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     return playlist.title.toLowerCase().contains(query) ||
                         playlist.description.toLowerCase().contains(query);
                   }).toList();
+                  final collaborativePlaylists = CollaborativeStore
+                      .instance
+                      .collaborativePlaylists
+                      .where((playlist) {
+                        if (query.isEmpty) return true;
+                        return playlist.name.toLowerCase().contains(query) ||
+                            playlist.description.toLowerCase().contains(query);
+                      })
+                      .toList();
+                  final selectedIdols = _selectedIdolsFor(store, query);
+                  final podcasts = store.podcasts.where((podcast) {
+                    if (query.isEmpty) return true;
+                    return podcast.title.toLowerCase().contains(query);
+                  }).toList();
                   final songs = store.songs.where((song) {
-                    if (query.isEmpty) return false;
+                    if (query.isEmpty) {
+                      return song.id.startsWith('local_');
+                    }
                     return song.title.toLowerCase().contains(query) ||
                         song.artist.toLowerCase().contains(query);
                   }).toList();
                   final hasSearchResults =
-                      query.isEmpty || playlists.isNotEmpty || songs.isNotEmpty;
+                      query.isEmpty ||
+                      playlists.isNotEmpty ||
+                      collaborativePlaylists.isNotEmpty ||
+                      selectedIdols.isNotEmpty ||
+                      podcasts.isNotEmpty ||
+                      songs.isNotEmpty;
 
                   return Column(
                     children: [
@@ -298,23 +339,44 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                 AppMotionEntry(
                                   child: _buildGridItem(
                                     title: 'Liked Songs',
-                                    subtitle: 'Playlist - ${store.favoriteSongs.length} songs',
+                                    subtitle:
+                                        'Playlist - ${store.favoriteSongs.length} songs',
                                     imageUrl: '',
                                     customLeading: Container(
-                                      width: (MediaQuery.of(context).size.width - 32 - 16) / 2,
-                                      height: (MediaQuery.of(context).size.width - 32 - 16) / 2,
+                                      width:
+                                          (MediaQuery.of(context).size.width -
+                                              32 -
+                                              16) /
+                                          2,
+                                      height:
+                                          (MediaQuery.of(context).size.width -
+                                              32 -
+                                              16) /
+                                          2,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(8),
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFF4B14C5), Color(0xFFC7E2F1)],
+                                          colors: [
+                                            Color(0xFF4B14C5),
+                                            Color(0xFFC7E2F1),
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                       ),
-                                      child: const Icon(Icons.favorite, color: Colors.white, size: 48),
+                                      child: const Icon(
+                                        Icons.favorite,
+                                        color: Colors.white,
+                                        size: 48,
+                                      ),
                                     ),
                                     onTap: () {
-                                      Navigator.push(context, AppMotion.route(const FavoriteSongsScreen()));
+                                      Navigator.push(
+                                        context,
+                                        AppMotion.route(
+                                          const FavoriteSongsScreen(),
+                                        ),
+                                      );
                                     },
                                   ),
                                 ),
@@ -323,12 +385,73 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   delay: Duration(milliseconds: 40 * entry.key),
                                   child: _buildGridItem(
                                     title: entry.value.title,
-                                    subtitle: 'Playlist - ${entry.value.creator} - ${entry.value.songIds.length} songs',
+                                    subtitle:
+                                        'Playlist - ${entry.value.creator} - ${entry.value.songIds.length} songs',
+                                    imageUrl: entry.value.coverUrl,
+                                    customLeading: PlaylistCoverArt(
+                                      coverUrl: entry.value.coverUrl,
+                                      songs: store.songsForPlaylist(
+                                        entry.value.id,
+                                      ),
+                                      size:
+                                          (MediaQuery.of(context).size.width -
+                                              32 -
+                                              16) /
+                                          2,
+                                      borderRadius: 8,
+                                    ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        AppMotion.route(
+                                          PlaylistDetailsScreen(
+                                            playlistId: entry.value.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              ...collaborativePlaylists.asMap().entries.map(
+                                (entry) => AppMotionEntry(
+                                  delay: Duration(milliseconds: 40 * entry.key),
+                                  child: _buildGridItem(
+                                    title: entry.value.name,
+                                    subtitle:
+                                        'Collaborative playlist - ${entry.value.songs.length} songs',
                                     imageUrl: entry.value.coverUrl,
                                     onTap: () {
                                       Navigator.push(
                                         context,
-                                        AppMotion.route(PlaylistDetailsScreen(playlistId: entry.value.id)),
+                                        AppMotion.route(
+                                          CollaborativePlaylistScreen(
+                                            playlistId: entry.value.id,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              ...selectedIdols.asMap().entries.map(
+                                (entry) => AppMotionEntry(
+                                  delay: Duration(milliseconds: 40 * entry.key),
+                                  child: _buildGridItem(
+                                    title: entry.value.name,
+                                    subtitle: 'Artist',
+                                    imageUrl: entry.value.imageUrl,
+                                    isArtist: true,
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        AppMotion.route(
+                                          AlbumDetailsScreen(
+                                            title: entry.value.name,
+                                            artist: entry.value.name,
+                                            imageUrl: entry.value.imageUrl,
+                                          ),
+                                        ),
                                       );
                                     },
                                   ),
@@ -338,7 +461,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           ),
                         )
                       else ...[
-                        if (query.isEmpty)
+                        if (query.isEmpty) ...[
                           AppMotionEntry(
                             child: LibraryListItem(
                               title: 'Liked Songs',
@@ -372,6 +495,55 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               },
                             ),
                           ),
+                          AppMotionEntry(
+                            delay: const Duration(milliseconds: 40),
+                            child: LibraryListItem(
+                              title: 'Add podcasts',
+                              subtitle: 'Choose shows for your library',
+                              imageUrl: '',
+                              customLeading: _buildActionLeading(
+                                Icons.podcasts,
+                              ),
+                              trailing: const Icon(
+                                Icons.add,
+                                color: AppColors.secondaryText,
+                              ),
+                              onTap: _openPodcastPicker,
+                            ),
+                          ),
+                          AppMotionEntry(
+                            delay: const Duration(milliseconds: 80),
+                            child: LibraryListItem(
+                              title: 'Add artists',
+                              subtitle: 'Follow more artists in your library',
+                              imageUrl: '',
+                              customLeading: _buildActionLeading(
+                                Icons.person_add_alt_1,
+                              ),
+                              trailing: const Icon(
+                                Icons.add,
+                                color: AppColors.secondaryText,
+                              ),
+                              onTap: _openArtistsPicker,
+                            ),
+                          ),
+                          AppMotionEntry(
+                            delay: const Duration(milliseconds: 120),
+                            child: LibraryListItem(
+                              title: 'Import your music',
+                              subtitle: 'Add audio files from this device',
+                              imageUrl: '',
+                              customLeading: _buildActionLeading(
+                                Icons.upload_file,
+                              ),
+                              trailing: const Icon(
+                                Icons.add,
+                                color: AppColors.secondaryText,
+                              ),
+                              onTap: _handleImportMusic,
+                            ),
+                          ),
+                        ],
                         if (query.isNotEmpty && playlists.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -393,6 +565,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               subtitle:
                                   'Playlist - ${entry.value.creator} - ${entry.value.songIds.length} songs',
                               imageUrl: entry.value.coverUrl,
+                              customLeading: PlaylistCoverArt(
+                                coverUrl: entry.value.coverUrl,
+                                songs: store.songsForPlaylist(entry.value.id),
+                              ),
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -403,6 +579,67 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   ),
                                 );
                               },
+                            ),
+                          ),
+                        ),
+                        ...collaborativePlaylists.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: LibraryListItem(
+                              title: entry.value.name,
+                              subtitle:
+                                  'Collaborative playlist - ${entry.value.songs.length} songs',
+                              imageUrl: entry.value.coverUrl,
+                              trailing: const Icon(
+                                Icons.groups_2_outlined,
+                                color: AppColors.secondaryText,
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  AppMotion.route(
+                                    CollaborativePlaylistScreen(
+                                      playlistId: entry.value.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        ...selectedIdols.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: LibraryListItem(
+                              title: entry.value.name,
+                              subtitle: 'Artist',
+                              imageUrl: entry.value.imageUrl,
+                              isArtist: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  AppMotion.route(
+                                    AlbumDetailsScreen(
+                                      title: entry.value.name,
+                                      artist: entry.value.name,
+                                      imageUrl: entry.value.imageUrl,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        ...podcasts.asMap().entries.map(
+                          (entry) => AppMotionEntry(
+                            delay: Duration(milliseconds: 40 * entry.key),
+                            child: LibraryListItem(
+                              title: entry.value.title,
+                              subtitle: entry.value.description,
+                              imageUrl: entry.value.coverUrl,
+                              customLeading: entry.value.coverUrl.isEmpty
+                                  ? _buildActionLeading(Icons.podcasts)
+                                  : null,
                             ),
                           ),
                         ),
@@ -461,12 +698,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
     required String subtitle,
     required String imageUrl,
     Widget? customLeading,
+    bool isArtist = false,
     required VoidCallback onTap,
   }) {
     return AppPressScale(
       onTap: onTap,
       child: SizedBox(
-        width: (MediaQuery.of(context).size.width - 32 - 16) / 2, // 2 items per row
+        width:
+            (MediaQuery.of(context).size.width - 32 - 16) /
+            2, // 2 items per row
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -475,7 +715,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   width: double.infinity,
                   height: (MediaQuery.of(context).size.width - 32 - 16) / 2,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    shape: isArtist ? BoxShape.circle : BoxShape.rectangle,
+                    borderRadius: isArtist ? null : BorderRadius.circular(8),
                     image: DecorationImage(
                       image: NetworkImage(imageUrl),
                       fit: BoxFit.cover,
@@ -487,14 +728,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+              style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryText),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.secondaryText,
+              ),
             ),
           ],
         ),
