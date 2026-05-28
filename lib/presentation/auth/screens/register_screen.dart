@@ -134,16 +134,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildStrengthIndicator() {
     int level = _getPasswordStrength(password);
+    const weakColor = Color(0xFFFF5C5C);
+    const mediumColor = Color(0xFFFFC857);
+    const strongColor = Color(0xFF3DDC84);
     Color color = AppColors.disabled;
+    IconData icon = Icons.info_outline;
     String text = "";
     if (level == 1) {
-      color = AppColors.error;
+      color = weakColor;
+      icon = Icons.error_outline;
       text = "Weak";
     } else if (level == 2) {
-      color = AppColors.warning;
+      color = mediumColor;
+      icon = Icons.warning_amber_rounded;
       text = "Medium";
     } else if (level == 3) {
-      color = AppColors.success;
+      color = strongColor;
+      icon = Icons.check_circle_outline;
       text = "Strong";
     }
 
@@ -156,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: level >= 1 ? AppColors.error : AppColors.disabled,
+                  color: level >= 1 ? weakColor : AppColors.disabled,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -166,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: level >= 2 ? AppColors.warning : AppColors.disabled,
+                  color: level >= 2 ? mediumColor : AppColors.disabled,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -176,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Container(
                 height: 4,
                 decoration: BoxDecoration(
-                  color: level >= 3 ? AppColors.success : AppColors.disabled,
+                  color: level >= 3 ? strongColor : AppColors.disabled,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -185,9 +192,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         const SizedBox(height: 8),
         if (level > 0)
-          Text(
-            "Password strength: $text",
-            style: AppTextStyles.helper.copyWith(color: color),
+          Row(
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                "Password strength: $text",
+                style: AppTextStyles.helper.copyWith(color: color),
+              ),
+            ],
           ),
       ],
     );

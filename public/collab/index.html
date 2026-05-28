@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Audify</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: #f8f8fb;
+        background: #0d0d11;
+      }
+
+      main {
+        width: min(100%, 420px);
+        display: grid;
+        gap: 18px;
+        text-align: center;
+      }
+
+      .logo {
+        width: 86px;
+        height: 86px;
+        margin: 0 auto;
+        border-radius: 22px;
+        object-fit: cover;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      p {
+        margin: 0;
+        color: #b8b8c4;
+        line-height: 1.5;
+      }
+
+      a,
+      button {
+        min-height: 52px;
+        border: 0;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        color: #111;
+        background: #fff;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .secondary {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="logo" src="/app/assets/assets/app_icon_launcher.png" alt="" />
+      <h1>Open Audify</h1>
+      <p>Opening the collaborative playlist in the Audify app.</p>
+      <button id="openButton" type="button">Open in Audify</button>
+      <a class="secondary" href="/">Install or download Audify</a>
+    </main>
+
+    <script>
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const playlistId = parts[1] || "";
+      const query = window.location.search || "";
+      const deepLink = `audify://collab/${encodeURIComponent(playlistId)}${query}`;
+
+      function openAudify() {
+        window.location.href = deepLink;
+      }
+
+      document.getElementById("openButton").addEventListener("click", openAudify);
+      setTimeout(openAudify, 300);
+    </script>
+  </body>
+</html>

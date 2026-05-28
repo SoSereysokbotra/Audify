@@ -4,6 +4,7 @@ class SongModel {
   final String artist;
   final String coverUrl;
   final String? localAudioPath;
+  final String? lyrics;
 
   const SongModel({
     required this.id,
@@ -11,5 +12,6 @@ class SongModel {
     required this.artist,
     required this.coverUrl,
     this.localAudioPath,
+    this.lyrics,
   });
 }

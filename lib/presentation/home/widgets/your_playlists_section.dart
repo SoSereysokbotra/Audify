@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../data/audify_store.dart';
 import '../../library/screens/playlist_details_screen.dart';
+import '../../library/widgets/playlist_cover_art.dart';
 
 class YourPlaylistsSection extends StatelessWidget {
   const YourPlaylistsSection({Key? key}) : super(key: key);
@@ -14,7 +15,8 @@ class YourPlaylistsSection extends StatelessWidget {
     return ListenableBuilder(
       listenable: AudifyStore.instance,
       builder: (context, _) {
-        final playlists = AudifyStore.instance.playlists;
+        final store = AudifyStore.instance;
+        final playlists = store.playlists;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -58,11 +60,11 @@ class YourPlaylistsSection extends StatelessWidget {
                         clipBehavior: Clip.hardEdge,
                         child: Row(
                           children: [
-                            Image.network(
-                              playlist.coverUrl,
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
+                            PlaylistCoverArt(
+                              coverUrl: playlist.coverUrl,
+                              songs: store.songsForPlaylist(playlist.id),
+                              size: 56,
+                              borderRadius: 0,
                             ),
                             const SizedBox(width: 8),
                             Expanded(

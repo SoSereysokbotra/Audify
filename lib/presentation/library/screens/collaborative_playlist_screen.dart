@@ -1,12 +1,14 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/motion/app_motion.dart';
 import '../../../core/theme/app_colors.dart';
@@ -17,6 +19,48 @@ import '../../../data/local_audio_player.dart';
 import '../../../domain/models/collaborative_playlist_model.dart';
 import '../../../domain/models/song_model.dart';
 import '../../player/screens/now_playing_screen.dart';
+
+enum _SharePlatform {
+  facebook('facebook', 'Facebook'),
+  instagram('instagram', 'Instagram'),
+  tiktok('tiktok', 'TikTok'),
+  telegram('telegram', 'Telegram'),
+  x('x', 'X');
+
+  final String key;
+  final String label;
+
+  const _SharePlatform(this.key, this.label);
+}
+
+enum _ShareLayout {
+  playlist('playlist', 'Playlist'),
+  artwork('artwork', 'Playlist artwork');
+
+  final String key;
+  final String label;
+
+  const _ShareLayout(this.key, this.label);
+}
+
+const _sharePlatformImages = {
+  _SharePlatform.facebook:
+      'https://res.cloudinary.com/dg5grwcd5/image/upload/v1779925884/5bb0f73a7b3e0f976acad614a42e5040_szbs1y.jpg',
+  _SharePlatform.instagram:
+      'https://res.cloudinary.com/dg5grwcd5/image/upload/v1779926159/5685d988cc0e1406f84d61936f96a71a_gtepwb.jpg',
+  _SharePlatform.tiktok:
+      'https://res.cloudinary.com/dg5grwcd5/image/upload/v1779925888/0bdbbef30f3d9833eb35f3befadd4b27_cnlgwk.jpg',
+  _SharePlatform.telegram:
+      'https://res.cloudinary.com/dg5grwcd5/image/upload/v1779925898/91aaf51ae3b6b52f73b2407383620bff_ghyvr2.jpg',
+  _SharePlatform.x:
+      'https://res.cloudinary.com/dg5grwcd5/image/upload/v1779925907/8e72f7331b652b842b0c271ab144d332_kjibba.jpg',
+};
+
+const _sharePosterColors = [
+  Color(0xFF721300),
+  Color(0xFF3B0B04),
+  Color(0xFF050505),
+];
 
 class CollaborativePlaylistScreen extends StatefulWidget {
   final String playlistId;
@@ -36,6 +80,9 @@ class CollaborativePlaylistScreen extends StatefulWidget {
 class _CollaborativePlaylistScreenState
     extends State<CollaborativePlaylistScreen> {
   final ImagePicker _imagePicker = ImagePicker();
+  static const MethodChannel _storyShareChannel = MethodChannel(
+    'audify/share_story',
+  );
 
   @override
   void initState() {
@@ -56,27 +103,218 @@ class _CollaborativePlaylistScreenState
     );
   }
 
-  String _inviteLink() => 'audify://collab/${widget.playlistId}';
+  String _inviteLink({bool inviteAsCollaborator = false}) {
+    final uri = Uri(
+      scheme: 'https',
+      host: 'audify-f9365.web.app',
+      pathSegments: ['collab', widget.playlistId],
+      queryParameters: inviteAsCollaborator
+          ? const {'invite': 'collaborator'}
+          : null,
+    );
+    return uri.toString();
+  }
 
-  Future<void> _copyInviteLink() async {
-    await Clipboard.setData(ClipboardData(text: _inviteLink()));
+  Future<void> _copyInviteLink({bool inviteAsCollaborator = false}) async {
+    await Clipboard.setData(
+      ClipboardData(
+        text: _inviteLink(inviteAsCollaborator: inviteAsCollaborator),
+      ),
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Invite link copied')));
   }
 
-  Future<void> _shareInviteLink([String? target]) async {
+  Future<void> _shareInviteLink({
+    String? target,
+    bool inviteAsCollaborator = false,
+  }) async {
     final targetText = target == null ? '' : ' on $target';
+    final actionText = inviteAsCollaborator
+        ? 'Join my collaborative playlist'
+        : 'Listen to my collaborative playlist';
     await SharePlus.instance.share(
       ShareParams(
-        text: 'Join my collaborative playlist$targetText: ${_inviteLink()}',
+        text:
+            '$actionText$targetText: ${_inviteLink(inviteAsCollaborator: inviteAsCollaborator)}',
       ),
     );
   }
 
+  Future<void> _shareInviteToPlatform(
+    _SharePlatform platform, {
+    _ShareLayout layout = _ShareLayout.playlist,
+    bool inviteAsCollaborator = false,
+    Uint8List? storyImageBytes,
+  }) async {
+    final link = _inviteLink(inviteAsCollaborator: inviteAsCollaborator);
+    final message = inviteAsCollaborator
+        ? 'Join my collaborative playlist as a collaborator on Audify: $link'
+        : 'Listen to my collaborative playlist on Audify: $link';
+    final openedStoryComposer = await _shareStoryWithNativeComposer(
+      platform,
+      message,
+      link,
+      layout,
+      inviteAsCollaborator,
+      storyImageBytes,
+    );
+    if (openedStoryComposer) {
+      return;
+    }
+
+    final launchTargets = _platformLaunchTargets(platform, message, link);
+    for (final target in launchTargets) {
+      try {
+        final opened = await launchUrl(
+          target,
+          mode: LaunchMode.externalApplication,
+        );
+        if (opened) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Opening ${platform.label}. Use the share composer to post it.',
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        // Try the next app/web route, then fall back to SharePlus.
+      }
+    }
+
+    await _shareInviteLink(
+      target: platform.label,
+      inviteAsCollaborator: inviteAsCollaborator,
+    );
+  }
+
+  Future<bool> _shareStoryWithNativeComposer(
+    _SharePlatform platform,
+    String message,
+    String link,
+    _ShareLayout layout,
+    bool inviteAsCollaborator,
+    Uint8List? storyImageBytes,
+  ) async {
+    try {
+      final playlist = _playlistById();
+      final opened = await _storyShareChannel.invokeMethod<bool>('shareStory', {
+        'platform': platform.key,
+        'playlistName': playlist?.name ?? 'Collaborative Playlist',
+        'inviteLink': link,
+        'message': message,
+        'shareLayout': layout.key,
+        'inviteAsCollaborator': inviteAsCollaborator,
+        'storyImageBytes': storyImageBytes,
+      });
+      return opened == true;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<Uint8List?> _captureSharePreview(GlobalKey previewKey) async {
+    final renderObject = previewKey.currentContext?.findRenderObject();
+    if (renderObject is! RenderRepaintBoundary) return null;
+
+    final image = await renderObject.toImage(pixelRatio: 3);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return byteData?.buffer.asUint8List();
+  }
+
+  List<Uri> _platformLaunchTargets(
+    _SharePlatform platform,
+    String message,
+    String link,
+  ) {
+    final encodedMessage = Uri.encodeComponent(message);
+    final encodedLink = Uri.encodeComponent(link);
+
+    switch (platform) {
+      case _SharePlatform.facebook:
+        return [
+          Uri.parse(
+            'fb://facewebmodal/f?href=https://www.facebook.com/sharer/sharer.php?u=$encodedLink',
+          ),
+          Uri.parse(
+            'https://www.facebook.com/sharer/sharer.php?u=$encodedLink',
+          ),
+        ];
+      case _SharePlatform.instagram:
+        return [
+          Uri.parse('instagram-stories://share'),
+          Uri.parse('instagram://story-camera'),
+        ];
+      case _SharePlatform.tiktok:
+        return [
+          Uri.parse('snssdk1233://share?text=$encodedMessage'),
+          Uri.parse('tiktok://share?text=$encodedMessage'),
+        ];
+      case _SharePlatform.telegram:
+        return [
+          Uri.parse('tg://msg?text=$encodedMessage'),
+          Uri.parse(
+            'https://t.me/share/url?url=$encodedLink&text=$encodedMessage',
+          ),
+        ];
+      case _SharePlatform.x:
+        return [
+          Uri.parse('twitter://post?message=$encodedMessage'),
+          Uri.parse('https://twitter.com/intent/tweet?text=$encodedMessage'),
+        ];
+    }
+  }
+
   Widget _buildShareSheet() {
-    final link = _inviteLink();
+    final playlist = _playlistById();
+    final playlistName = playlist?.name ?? 'Collaborative Playlist';
+    final creatorName = playlist == null
+        ? _creatorNameFallback()
+        : _creatorName(playlist);
+    final playlistPreviewKey = GlobalKey();
+    final artworkPreviewKey = GlobalKey();
+    final pageController = PageController(viewportFraction: 0.78);
+    var selectedLayout = _ShareLayout.playlist;
+    var inviteAsCollaborator = false;
+    var selectedPosterColor = _sharePosterColors.first;
+
+    void selectLayout(
+      _ShareLayout layout,
+      StateSetter setSheetState, {
+      bool animatePage = true,
+    }) {
+      final page = layout == _ShareLayout.playlist ? 0 : 1;
+      setSheetState(() => selectedLayout = layout);
+      if (!animatePage) return;
+      pageController.animateToPage(
+        page,
+        duration: AppMotion.standard,
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    Future<void> shareToPlatform(_SharePlatform platform) async {
+      final previewKey = selectedLayout == _ShareLayout.playlist
+          ? playlistPreviewKey
+          : artworkPreviewKey;
+      final storyImageBytes = await _captureSharePreview(previewKey);
+      await _shareInviteToPlatform(
+        platform,
+        layout: selectedLayout,
+        inviteAsCollaborator: inviteAsCollaborator,
+        storyImageBytes: storyImageBytes,
+      );
+    }
+
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 1.0, end: 0.0),
       duration: AppMotion.standard,
@@ -84,86 +322,211 @@ class _CollaborativePlaylistScreenState
       builder: (context, value, child) {
         return Transform.translate(
           offset: Offset(0, value * 200),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF202020),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 14),
+                      Container(
+                        width: 52,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.white38,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 430,
+                        child: PageView(
+                          controller: pageController,
+                          onPageChanged: (index) {
+                            selectLayout(
+                              index == 0
+                                  ? _ShareLayout.playlist
+                                  : _ShareLayout.artwork,
+                              setSheetState,
+                              animatePage: false,
+                            );
+                          },
+                          children: [
+                            _ShareStoryPreview(
+                              repaintKey: playlistPreviewKey,
+                              layout: _ShareLayout.playlist,
+                              isSelected:
+                                  selectedLayout == _ShareLayout.playlist,
+                              playlistName: playlistName,
+                              creatorName: creatorName,
+                              coverUrl: playlist?.coverUrl ?? '',
+                              posterColor: selectedPosterColor,
+                            ),
+                            _ShareStoryPreview(
+                              repaintKey: artworkPreviewKey,
+                              layout: _ShareLayout.artwork,
+                              isSelected:
+                                  selectedLayout == _ShareLayout.artwork,
+                              playlistName: playlistName,
+                              creatorName: creatorName,
+                              coverUrl: playlist?.coverUrl ?? '',
+                              posterColor: selectedPosterColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _ShareLayoutToggle(
+                          selectedLayout: selectedLayout,
+                          onChanged: (layout) {
+                            selectLayout(layout, setSheetState);
+                          },
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 18),
+                        child: _SharePosterColorPicker(
+                          selectedColor: selectedPosterColor,
+                          onChanged: (color) {
+                            setSheetState(() => selectedPosterColor = color);
+                          },
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: AppMotion.quick,
+                        curve: Curves.easeOutCubic,
+                        margin: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                        child: GestureDetector(
+                          onTap: () {
+                            setSheetState(
+                              () =>
+                                  inviteAsCollaborator = !inviteAsCollaborator,
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              AnimatedContainer(
+                                duration: AppMotion.quick,
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: inviteAsCollaborator
+                                        ? Colors.white
+                                        : Colors.white54,
+                                    width: 3,
+                                  ),
+                                  color: inviteAsCollaborator
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                ),
+                                child: inviteAsCollaborator
+                                    ? const Icon(
+                                        Icons.check,
+                                        color: Colors.black,
+                                        size: 20,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 14),
+                              Text(
+                                'Invite as collaborator',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Divider(color: Colors.white12, height: 1),
+                      SizedBox(
+                        height: 132,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+                          children: [
+                            _SocialButton(
+                              color: Colors.white,
+                              label: 'Copy\nlink',
+                              onTap: () => _copyInviteLink(
+                                inviteAsCollaborator: inviteAsCollaborator,
+                              ),
+                            ),
+                            const SizedBox(width: 22),
+                            _SocialButton(
+                              imageUrl:
+                                  _sharePlatformImages[_SharePlatform
+                                      .instagram],
+                              color: const Color(0xFFE4405F),
+                              label: 'Stories',
+                              onTap: () =>
+                                  shareToPlatform(_SharePlatform.instagram),
+                            ),
+                            const SizedBox(width: 22),
+                            _SocialButton(
+                              imageUrl:
+                                  _sharePlatformImages[_SharePlatform.facebook],
+                              color: const Color(0xFF1877F2),
+                              label: 'Stories',
+                              onTap: () =>
+                                  shareToPlatform(_SharePlatform.facebook),
+                            ),
+                            const SizedBox(width: 22),
+                            _SocialButton(
+                              imageUrl:
+                                  _sharePlatformImages[_SharePlatform.tiktok],
+                              color: Colors.white,
+                              label: 'TikTok',
+                              onTap: () =>
+                                  shareToPlatform(_SharePlatform.tiktok),
+                            ),
+                            const SizedBox(width: 22),
+                            _SocialButton(
+                              imageUrl:
+                                  _sharePlatformImages[_SharePlatform.telegram],
+                              color: const Color(0xFF2AABEE),
+                              label: 'Telegram',
+                              onTap: () =>
+                                  shareToPlatform(_SharePlatform.telegram),
+                            ),
+                            const SizedBox(width: 22),
+                            _SocialButton(
+                              imageUrl: _sharePlatformImages[_SharePlatform.x],
+                              color: Colors.white,
+                              label: 'X',
+                              onTap: () => shareToPlatform(_SharePlatform.x),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                const Text('Invite collaborators', style: AppTextStyles.h2),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: QrImageView(
-                    data: link,
-                    version: QrVersions.auto,
-                    size: 150,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: const Icon(CupertinoIcons.link, color: Colors.white),
-                  title: const Text(
-                    'Copy Link',
-                    style: AppTextStyles.bodyLarge,
-                  ),
-                  trailing: const Icon(
-                    CupertinoIcons.doc_on_clipboard,
-                    color: AppColors.accent,
-                  ),
-                  onTap: _copyInviteLink,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  tileColor: Colors.white.withValues(alpha: 0.05),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _SocialButton(
-                      icon: Icons.facebook,
-                      color: Colors.blue,
-                      label: 'Messenger',
-                      onTap: () => _shareInviteLink('Messenger'),
-                    ),
-                    _SocialButton(
-                      icon: Icons.camera_alt,
-                      color: Colors.purple,
-                      label: 'Instagram',
-                      onTap: () => _shareInviteLink('Instagram'),
-                    ),
-                    _SocialButton(
-                      icon: Icons.music_note,
-                      color: Colors.white,
-                      label: 'TikTok',
-                      onTap: () => _shareInviteLink('TikTok'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
+              );
+            },
           ),
         );
       },
     );
+  }
+
+  String _creatorNameFallback() {
+    final displayName = FirebaseAuth.instance.currentUser?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+    final profileName = AudifyStore.instance.profile.displayName.trim();
+    return profileName.isEmpty ? 'You' : profileName;
   }
 
   CollaborativePlaylistModel? _playlistById() {
@@ -1144,14 +1507,510 @@ class _SongRow extends StatelessWidget {
   }
 }
 
+class _ShareStoryPreview extends StatelessWidget {
+  final GlobalKey repaintKey;
+  final _ShareLayout layout;
+  final bool isSelected;
+  final String playlistName;
+  final String creatorName;
+  final String coverUrl;
+  final Color posterColor;
+
+  const _ShareStoryPreview({
+    required this.repaintKey,
+    required this.layout,
+    required this.isSelected,
+    required this.playlistName,
+    required this.creatorName,
+    required this.coverUrl,
+    required this.posterColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isArtwork = layout == _ShareLayout.artwork;
+
+    return RepaintBoundary(
+      key: repaintKey,
+      child: AnimatedScale(
+        scale: isSelected ? 1 : 0.94,
+        duration: AppMotion.quick,
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: AppMotion.quick,
+          margin: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isSelected ? 0.34 : 0.18),
+                blurRadius: isSelected ? 22 : 12,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 9 / 16,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _StoryArtworkBackdrop(
+                    coverUrl: coverUrl,
+                    posterColor: posterColor,
+                  ),
+                  Container(color: Colors.black.withValues(alpha: 0.28)),
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isArtwork ? 38 : 30,
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: isArtwork ? 310 : 320,
+                          child: isArtwork
+                              ? _ArtworkPreviewBody(
+                                  playlistName: playlistName,
+                                  creatorName: creatorName,
+                                  coverUrl: coverUrl,
+                                )
+                              : _PlaylistPreviewBody(
+                                  playlistName: playlistName,
+                                  creatorName: creatorName,
+                                  coverUrl: coverUrl,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryArtworkBackdrop extends StatelessWidget {
+  final String coverUrl;
+  final Color posterColor;
+
+  const _StoryArtworkBackdrop({
+    required this.coverUrl,
+    required this.posterColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        DecoratedBox(decoration: BoxDecoration(color: posterColor)),
+        Transform.scale(
+          scale: 1.12,
+          child: ImageFiltered(
+            imageFilter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: _ArtworkImage(
+              source: coverUrl,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              placeholderIconSize: 88,
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(color: posterColor.withValues(alpha: 0.32)),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.22),
+                Colors.black.withValues(alpha: 0.06),
+                Colors.black.withValues(alpha: 0.48),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlaylistPreviewBody extends StatelessWidget {
+  final String playlistName;
+  final String creatorName;
+  final String coverUrl;
+
+  const _PlaylistPreviewBody({
+    required this.playlistName,
+    required this.creatorName,
+    required this.coverUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _StoryPostCard(
+      maxWidth: 320,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 92,
+              height: 92,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ArtworkImage(
+                    source: coverUrl,
+                    width: 92,
+                    height: 92,
+                    fit: BoxFit.cover,
+                    placeholderIconSize: 42,
+                  ),
+                  const Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: _AudifyLogoBadge(size: 24),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  playlistName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  creatorName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFCFCFCF),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const _AudifyMark(fontSize: 14),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtworkPreviewBody extends StatelessWidget {
+  final String playlistName;
+  final String creatorName;
+  final String coverUrl;
+
+  const _ArtworkPreviewBody({
+    required this.playlistName,
+    required this.creatorName,
+    required this.coverUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _StoryPostCard(
+      maxWidth: 310,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _ArtworkImage(
+                    source: coverUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholderIconSize: 84,
+                  ),
+                  const Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: _AudifyLogoBadge(size: 38),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text(
+            playlistName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 25,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            creatorName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFFCFCFCF),
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 28),
+          const _AudifyMark(fontSize: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoryPostCard extends StatelessWidget {
+  final double maxWidth;
+  final EdgeInsetsGeometry padding;
+  final Widget child;
+
+  const _StoryPostCard({
+    required this.maxWidth,
+    required this.padding,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.42),
+              blurRadius: 24,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Padding(padding: padding, child: child),
+      ),
+    );
+  }
+}
+
+class _ShareLayoutToggle extends StatelessWidget {
+  final _ShareLayout selectedLayout;
+  final ValueChanged<_ShareLayout> onChanged;
+
+  const _ShareLayoutToggle({
+    required this.selectedLayout,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Row(
+        children: _ShareLayout.values.map((layout) {
+          final selected = layout == selectedLayout;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(layout),
+              child: AnimatedScale(
+                scale: selected ? 1 : 0.97,
+                duration: AppMotion.quick,
+                curve: Curves.easeOutCubic,
+                child: AnimatedContainer(
+                  duration: AppMotion.quick,
+                  curve: Curves.easeOutCubic,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: selected ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Text(
+                    layout.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: selected
+                          ? Colors.black
+                          : Colors.white.withValues(alpha: 0.82),
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _SharePosterColorPicker extends StatelessWidget {
+  final Color selectedColor;
+  final ValueChanged<Color> onChanged;
+
+  const _SharePosterColorPicker({
+    required this.selectedColor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: _sharePosterColors.map((color) {
+        final selected = color == selectedColor;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: GestureDetector(
+            onTap: () => onChanged(color),
+            child: AnimatedContainer(
+              duration: AppMotion.quick,
+              curve: Curves.easeOutCubic,
+              width: 34,
+              height: 34,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? Colors.white : Colors.white24,
+                  width: selected ? 2 : 1,
+                ),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: selected
+                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                    : null,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _AudifyMark extends StatelessWidget {
+  final double fontSize;
+
+  const _AudifyMark({required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _AudifyLogoBadge(size: fontSize + 10, hasShadow: false),
+        const SizedBox(width: 8),
+        Text(
+          'Audify',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AudifyLogoBadge extends StatelessWidget {
+  final double size;
+  final bool hasShadow;
+
+  const _AudifyLogoBadge({required this.size, this.hasShadow = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(size * 0.22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        boxShadow: hasShadow
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.36),
+                  blurRadius: size * 0.45,
+                  offset: Offset(0, size * 0.14),
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.18),
+        child: Image.asset(
+          'assets/app_icon.png',
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+}
+
 class _SocialButton extends StatelessWidget {
-  final IconData icon;
+  final String? imageUrl;
   final Color color;
   final String label;
   final VoidCallback onTap;
 
   const _SocialButton({
-    required this.icon,
+    this.imageUrl,
     required this.color,
     required this.label,
     required this.onTap,
@@ -1169,7 +2028,18 @@ class _SocialButton extends StatelessWidget {
               color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: imageUrl == null
+                ? Icon(Icons.link, color: color, size: 28)
+                : ClipOval(
+                    child: Image.network(
+                      imageUrl!,
+                      width: 28,
+                      height: 28,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Icon(Icons.share, color: color, size: 28),
+                    ),
+                  ),
           ),
         ),
         const SizedBox(height: 8),

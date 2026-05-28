@@ -30,6 +30,9 @@ class LocalAudioPlayer extends ChangeNotifier {
   // Track if we already triggered auto-next for the current completion event
   bool _handlingCompletion = false;
 
+  Timer? _sleepTimer;
+  DateTime? _sleepTimerEndTime;
+
   // ── Getters ──────────────────────────────────────────────────────────────
 
   AudioPlayer get player => _player;
@@ -41,6 +44,8 @@ class LocalAudioPlayer extends ChangeNotifier {
 
   bool get hasPrevious => _currentIndex > 0;
   bool get hasNext => _currentIndex < _queue.length - 1 || _repeatMode == RepeatMode.all;
+
+  DateTime? get sleepTimerEndTime => _sleepTimerEndTime;
 
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
@@ -106,6 +111,26 @@ class LocalAudioPlayer extends ChangeNotifier {
     } else {
       await _player.play();
     }
+    notifyListeners();
+  }
+
+  void startSleepTimer(Duration duration) {
+    _sleepTimer?.cancel();
+    _sleepTimerEndTime = DateTime.now().add(duration);
+    _sleepTimer = Timer(duration, () async {
+      if (_player.playing) {
+        await _player.pause();
+      }
+      _sleepTimerEndTime = null;
+      notifyListeners();
+    });
+    notifyListeners();
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepTimerEndTime = null;
     notifyListeners();
   }
 

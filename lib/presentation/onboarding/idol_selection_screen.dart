@@ -266,7 +266,7 @@ class _IdolSelectionScreenState extends State<IdolSelectionScreen> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   disabledBackgroundColor: AppColors.surface,
                   disabledForegroundColor: Colors.white54,
                   shape: RoundedRectangleBorder(

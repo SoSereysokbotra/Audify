@@ -17,6 +17,36 @@ class MockData {
       coverUrl:
           'https://i.pinimg.com/736x/20/7a/b1/207ab15d7d5a91ad76e050959df4cb5a.jpg',
       localAudioPath: 'assets/audio/song-01_back_to_friends.mp3',
+      lyrics: '''Touch my body tender
+'Cause the feeling makes me weak
+Kicking off the covers
+I see the ceiling, while you're looking down at me
+How can we go back to being friends
+When we just shared a bed?
+How can you look at me and pretend
+I'm someone you've never met?
+It was last December
+You were layin' on my chest
+I still remember
+I was scared to take a breath, didn't want you to move your head
+How can we go back to being friends
+When we just shared a bed? (Yeah)
+How can you look at me and pretend
+I'm someone you've never met?
+The devil in your eyes
+Won't deny the lies
+You've sold, I'm holding on too tight
+While you let go, this is casual
+How can we go back to being friends
+When we just shared a bed? (Yeah)
+How can you look at me and pretend
+I'm someone you've never met?
+How can we go back to being friends
+When we just shared a bed? (Yeah)
+How can you look at me and pretend
+I'm someone you've never met?
+I'm someone you've never met
+Oh yeah''',
     ),
     SongModel(
       id: '2',
@@ -25,6 +55,73 @@ class MockData {
       coverUrl:
           'https://images.genius.com/9278c644f451b2497b31a976be2e8556.1000x1000x1.png',
       localAudioPath: 'assets/audio/song-02_the_one_that_got_away.mp3',
+      lyrics: '''[00:03.000] Summer after high school when we first met
+[00:07.000] We make out in your Mustang to Radiohead
+[00:11.000] And on my 18th birthday we got matching tattoos
+[00:19.000] Used to steal your parents' liquor and climb to the roof
+[00:23.000] Talk about our future like we had a clue
+[00:27.000] Never planned that one day. I'd be losing you
+[00:33.000] In another life
+[00:37.000] I would be your girl
+[00:41.000] We keep all our promises
+[00:44.000] Be us against the world
+[00:49.000] In another life
+[00:53.000] I would make you stay
+[00:56.000] So I don't have to say
+[00:59.000] You were the one that got away
+[01:04.000] The one that got away
+[01:09.000] I was June and you were my Johnny Cash
+[01:12.000] Never one without the other we made a pact
+[01:16.000] Sometimes when I miss you
+[01:18.000] I put those records on
+[01:24.000] Someone said you had your tattoo removed
+[01:28.000] Saw you downtown singing the blues
+[01:32.000] Its time to face the music
+[01:34.000] I'm no longer your muse
+[01:38.000] In another life
+[01:42.000] I would be your girl
+[01:46.000] We keep all our promises
+[01:50.000] Be us against the world
+[01:54.000] In another life
+[01:58.000] I would make you stay
+[02:02.000] So I don't have to say
+[02:05.000] You were the one that got away
+[02:10.000] The one that got away
+[02:12.000] The o-o-o-o-o-o-one
+[02:13.000] The o-o-o-o-o-o-one
+[02:13.000] The o-o-o-o-o-o-one
+[02:14.000] The one that got away
+[02:14.000] I'm falling for you like dominoes
+[02:16.000] From the top of the hundredth floor
+[02:19.000] Look out below Geronimo
+[02:20.000] Tryin' to get behind the closed doors to your soul
+[02:24.000] Why'd you have to end the show
+[02:26.000] We had such a beautiful plot
+[02:27.000] There was still more story to go
+[02:31.000] Now look, I'm not insinuating that
+[02:35.000] You're some type of fair weather player
+[02:39.000] But even if the whole world falls over
+[02:45.000] I wouldn't be aware of a glacier
+[02:47.000] I just wanna see you wake up
+[02:50.000] Doing your hair in the mirror with your makeup
+[02:55.000] Then, maybe in the next lifetime we could make up
+[03:01.000] In another life
+[03:02.000] I would be your girl
+[03:05.000] We keep all our promises
+[03:09.000] Be us against the world
+[03:13.000] In another life
+[03:17.000] I would make you stay
+[03:21.000] So I don't have to say
+[03:24.000] You were the one that got away
+[03:29.000] The one that got away
+[03:31.000] The o- o- o- o- o- one
+[03:37.000] The o- o- o- o- o- one
+[03:41.000] The o- o- o- o- o- one
+[03:45.000] In another life
+[03:49.000] I would make you stay
+[03:53.000] So I don’t have to say
+[03:56.000] You were the one that got away
+[04:01.000] The one that got away''',
     ),
     SongModel(
       id: '3',
@@ -63,6 +160,25 @@ class MockData {
       artist: 'Passenger',
       coverUrl: 'https://i.ytimg.com/vi/RBumgq5yVrA/maxresdefault.jpg',
       localAudioPath: 'assets/audio/song-07_let_her_go.mp3',
+      lyrics: '''[00:26.000] well you only need the light when it's burning low only miss the sun when it starts to snow only know you love her when you let her go
+[00:39.000] only know you've been high when you're feeling low only hate the road when you're missing home only know you love her when you let her go
+[00:52.000] and you let her go
+[01:05.000] staring at the bottom of your claws hoping one day you'll make a dream last
+[01:11.000] but dreams come slow and they go so fast you see when you close your eyes maybe
+[01:21.000] one day you'll understand why everything you touch surely dies
+[01:29.000] but you only need the light when it's burning low only miss the sun when it starts to snow only know you love her when you let her go
+[01:49.000] only know you love her when you let her go staring at the ceiling in the dark same old empty
+[02:00.000] feeling in your heart cause love comes slow and it goes so
+[02:05.000] fast we see you when you fall asleep but never to touch and
+[02:13.000] never to keep courts you love to too much and you dive too deep
+[02:33.000] only know you've been high when you're feeling low
+[02:37.000] only hate the road when you're missing home only know you'll love her when you let her go
+[02:55.000] oh
+[03:12.000] cause you only need the light when it's running low only miss the sun when it starts to snow only know you love her when you let her go
+[03:25.000] only know you've been high when you feel alone only hate the road when you're missing home
+[03:41.000] only miss the sun when it starts to snow only know you love her when you let her go
+[03:51.000] only know you've been high when you're feeling low only hate the road when you're missing home only know you love her when you let her go
+[04:06.000] and you let her go you let her go''',
     ),
     SongModel(
       id: '8',
@@ -78,6 +194,74 @@ class MockData {
       coverUrl:
           'https://i1.sndcdn.com/artworks-zXopyj5CzVwSC8RM-k7RKDg-t500x500.jpg',
       localAudioPath: 'assets/audio/song-09_we_dont_talk_anymore.mp3',
+      lyrics: '''[00:04.000] We don't talk anymore
+[00:04.000] We don't talk anymore
+[00:04.000] We don't talk anymore like we used to do
+[00:11.000] We don't love anymore
+[00:11.000] What was all of it for
+[00:11.000] Oh, we don't talk anymore like we used to do
+[00:18.000] I just heard you found the one you've been looking
+[00:26.000] You've been looking for
+[00:26.000] I wish I would have known that wasn't me
+[00:33.000] 'Cause even after all this time I still wonder
+[00:33.000] Why I can't move on just the way you did so easily
+[00:41.000] Don't want to know
+[00:41.000] Kind of dress you're wearing tonight
+[00:41.000] If he's holding on to you so tight
+[00:48.000] The way I did before
+[00:48.000] I overdosed
+[00:48.000] Should have known your love was a game
+[00:55.000] Now I can't get you out of my brain
+[00:55.000] Oh, it's such a shame
+[00:55.000] We don't talk anymore
+[01:03.000] We don't talk anymore
+[01:03.000] We don't talk anymore like we used to do
+[01:12.000] We don't love anymore
+[01:12.000] What was all of it for
+[01:12.000] We don't talk anymore like we used to do
+[01:21.000] I just hope you're lying next to somebody
+[01:21.000] Who knows how to love you like me
+[01:21.000] There must be a good reason that you're gone
+[01:30.000] Every now and then I think you might want to come show up at your door
+[01:30.000] But I'm just too afraid that I'll be wrong
+[01:39.000] Don't want to know
+[01:39.000] If you're looking into her eyes
+[01:39.000] She's holding on to you so tight
+[01:49.000] The way I did before
+[01:49.000] I overdosed
+[01:49.000] Should have known your love was a game
+[01:55.000] Now I can't get you out of my brain
+[01:55.000] Oh, it's such a shame
+[01:55.000] We don't talk anymore
+[02:03.000] We don't talk anymore
+[02:03.000] We don't talk anymore like we used to do
+[02:10.000] We don't love anymore
+[02:10.000] What was all of it for
+[02:10.000] We don't talk anymore like we used to do
+[02:18.000] (Music)
+[02:26.000] Like we used to do
+[02:30.000] (Music)
+[02:38.000] Don't want to know
+[02:38.000] Kind of dress you're wearing tonight
+[02:38.000] If he's giving it to you just right
+[02:46.000] The way I did before
+[02:46.000] I overdosed
+[02:46.000] Should have known your love was a game
+[02:53.000] Now I can't get you out of my brain
+[02:53.000] Oh, it's such a shame
+[02:53.000] We don't talk anymore
+[03:00.000] We don't talk anymore
+[03:00.000] We don't talk anymore like we used to do
+[03:08.000] We don't love anymore
+[03:08.000] What was all of it for
+[03:08.000] Oh, we don't talk anymore like we used to do
+[03:16.000] We don't talk
+[03:18.000] (Music)
+[03:23.000] Anymore
+[03:23.000] We don't talk anymore
+[03:23.000] Can't get you out
+[03:32.000] Oh, it's such a shame
+[03:32.000] We don't talk anymore''',
     ),
     SongModel(
       id: '10',
@@ -126,6 +310,57 @@ class MockData {
       coverUrl:
           'https://i.pinimg.com/1200x/3b/b3/5c/3bb35c263b47c3aa07f9f7ad64c3b5d7.jpg',
       localAudioPath: 'assets/audio/song-15_outside_slowed_reverb.mp3',
+      lyrics: '''[00:00.000] (light music) (bright music)
+[00:09.000] Look at what you've done
+[00:09.000] Stand still, fallin' away from me
+[00:17.000] When it takes so long
+[00:17.000] Fire's out, what do you want to be
+[00:24.000] I'm holdin' on
+[00:24.000] Myself was never enough for me
+[00:32.000] Gotta be so strong
+[00:32.000] There's a power in what you do
+[00:32.000] Now, every other day I'll be watching you
+[00:39.000] Oh oh
+[00:39.000] Show you what it feels like
+[00:39.000] Now I'm on the outside
+[00:48.000] Oh oh
+[00:48.000] We did everything right, now I'm on the outside
+[00:56.000] Oh oh
+[00:56.000] I'll show you what it feels like
+[00:56.000] Now I'm on the outside
+[01:03.000] Oh oh
+[01:03.000] We did everything right, now I'm on the outside
+[01:24.000] Though you give me no reason
+[01:24.000] For me to stay close to you
+[01:24.000] Tell me what lovers do
+[01:32.000] How are we still breathing
+[01:32.000] It's never for us to choose
+[01:32.000] I'll be the strength in you
+[01:39.000] I'm holdin' on
+[01:39.000] Myself was never enough for me
+[01:47.000] Gotta be so strong
+[01:47.000] There's a power in what you do
+[01:47.000] Now, every other day I'll be watching you
+[01:47.000] Oh oh
+[01:56.000] Oh oh
+[01:56.000] Show you what it feels like
+[01:56.000] Now I'm on the outside
+[02:03.000] Oh oh
+[02:03.000] We did everything right, now I'm on the outside
+[02:11.000] Oh oh
+[02:11.000] Show you what it feels like
+[02:11.000] Now I'm on the outside
+[02:18.000] Oh oh
+[02:18.000] We did everything right, now I'm on the outside
+[02:18.000] (upbeat energetic music)
+[02:39.000] (light music)
+[02:39.000] I'll show you what it feels like
+[02:39.000] Now I'm on the outside
+[02:50.000] I'll show you what it feels like
+[02:50.000] Show you what it feels like
+[03:00.000] Now I'm on the outside
+[03:00.000] We did everything right, now I'm on the outside
+[03:13.000] (upbeat energetic music)''',
     ),
     SongModel(
       id: '16',

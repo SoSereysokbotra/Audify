@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../data/collaborative_store.dart';
-import '../../presentation/library/screens/blend_generate_screen.dart';
 import '../../presentation/library/screens/create_collaborative_screen.dart';
 import '../../presentation/library/screens/create_playlist_screen.dart';
 import '../motion/app_motion.dart';
@@ -71,34 +69,6 @@ class CreateOptionsSheet {
                       duration: AppMotion.relaxed,
                     ),
                   );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.people,
-                  color: AppColors.primaryText,
-                  size: 28,
-                ),
-                title: const Text('Blend', style: AppTextStyles.bodyLarge),
-                subtitle: Text(
-                  'Combine tastes in a shared playlist with friends',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.primaryText,
-                  ),
-                ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    final blendId = await CollaborativeStore.instance
-                        .createBlendInvite();
-                    if (!context.mounted) return;
-                    Navigator.push(
-                      context,
-                      AppMotion.route(BlendGenerateScreen(blendId: blendId)),
-                    );
-                  } catch (e) {
-                    debugPrint('Error creating blend: $e');
-                  }
                 },
               ),
             ],

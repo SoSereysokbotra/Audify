@@ -1,14 +1,11 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/models/collaborative_playlist_model.dart';
-import '../domain/models/blend_model.dart';
 import '../domain/models/song_model.dart';
-import 'audify_store.dart';
 
 class CollaborativeStore extends ChangeNotifier {
   static final CollaborativeStore instance = CollaborativeStore._();
@@ -17,25 +14,19 @@ class CollaborativeStore extends ChangeNotifier {
   final _uuid = const Uuid();
 
   StreamSubscription? _collabSubscription;
-  StreamSubscription? _blendSubscription;
 
   final List<CollaborativePlaylistModel> _collaborativePlaylists = [];
-  final List<BlendModel> _blends = [];
 
   List<CollaborativePlaylistModel> get collaborativePlaylists =>
       List.unmodifiable(_collaborativePlaylists);
-  List<BlendModel> get blends => List.unmodifiable(_blends);
 
   CollaborativeStore._() {
     _auth.authStateChanges().listen((user) {
       if (user != null) {
         _subscribeToCollaborativePlaylists(user.uid);
-        _subscribeToBlends(user.uid);
       } else {
         _collabSubscription?.cancel();
-        _blendSubscription?.cancel();
         _collaborativePlaylists.clear();
-        _blends.clear();
         notifyListeners();
       }
     });
@@ -58,31 +49,6 @@ class CollaborativeStore extends ChangeNotifier {
               debugPrint("Error parsing collab playlist: $e");
             }
           }
-          notifyListeners();
-        });
-  }
-
-  void _subscribeToBlends(String userId) {
-    _blendSubscription?.cancel();
-    // Fetch blends where user is creator OR friend
-    // Firestore OR queries are limited, but we can use two queries or just fetch where arrayContains userIds
-    // For simplicity, we'll assume a 'userIds' array exists, but our model has creatorId and friendId.
-    // Let's modify the query to use an array 'userIds' for easier querying.
-    _blendSubscription = _firestore
-        .collection('blends')
-        .where('userIds', arrayContains: userId)
-        .snapshots()
-        .listen((snapshot) {
-          _blends.clear();
-          for (var doc in snapshot.docs) {
-            try {
-              _blends.add(BlendModel.fromJson(doc.data()));
-            } catch (e) {
-              debugPrint("Error parsing blend: $e");
-            }
-          }
-          // Sort descending by creation
-          _blends.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           notifyListeners();
         });
   }
@@ -264,7 +230,14 @@ class CollaborativeStore extends ChangeNotifier {
 
   Future<void> joinCollaborativePlaylist(String playlistId) async {
     final user = _auth.currentUser;
-    final uid = user?.uid ?? 'mock_user_123';
+    if (user == null) {
+      throw FirebaseException(
+        plugin: 'audify',
+        code: 'not-signed-in',
+        message: 'Please sign in before joining a collaborative playlist.',
+      );
+    }
+    final uid = user.uid;
 
     final doc = await _firestore
         .collection('collaborative_playlists')
@@ -337,92 +310,5 @@ class CollaborativeStore extends ChangeNotifier {
         .collection('collaborative_playlists')
         .doc(playlistId)
         .delete();
-  }
-
-  // --- BLEND MOCK AI ENGINE ---
-
-  Future<String> createBlendInvite() async {
-    final user = _auth.currentUser;
-    final uid = user?.uid ?? 'mock_user_123';
-
-    final id = _uuid.v4();
-    final blend = BlendModel(
-      id: id,
-      creatorId: uid,
-      compatibilityScore: 0.0,
-      sharedArtists: [],
-      sharedGenres: [],
-      moodMatch: '',
-      blendedSongs: [],
-      createdAt: DateTime.now(),
-    );
-
-    await _firestore.collection('blends').doc(id).set({
-      ...blend.toJson(),
-      'userIds': [uid], // Array for easy querying
-      'status': 'pending', // Waiting for friend
-    });
-
-    // We don't add to optimistic UI until it's "ready", but we can if we want to show pending invites.
-
-    return id;
-  }
-
-  Future<BlendModel> joinBlendAndGenerate(String blendId) async {
-    final user = _auth.currentUser;
-    final uid = user?.uid ?? 'mock_friend_456';
-
-    final doc = await _firestore.collection('blends').doc(blendId).get();
-    if (!doc.exists) throw Exception("Blend not found");
-
-    if (doc.data()?['status'] == 'completed') {
-      return BlendModel.fromJson(doc.data()!); // already generated
-    }
-
-    // Mock AI Logic
-    // We will generate random compatibility, some shared artists, and pick some random songs
-    final rand = Random();
-    final score = 0.60 + (rand.nextDouble() * 0.38); // 60% to 98%
-    final moods = ['Vibing', 'Energetic', 'Chill', 'Nostalgic', 'Melancholic'];
-    final selectedMood = moods[rand.nextInt(moods.length)];
-
-    // Fetch some songs from AudifyStore to "blend"
-    final allSongs = AudifyStore.instance.songs;
-    final blendedSongs = <CollaborativeSong>[];
-
-    final songCount = 15 + rand.nextInt(10); // 15 to 25 songs
-    final shuffledSongs = List<SongModel>.from(allSongs)..shuffle();
-    final creatorId = doc.data()?['creatorId'] as String;
-
-    for (int i = 0; i < min(songCount, shuffledSongs.length); i++) {
-      blendedSongs.add(
-        CollaborativeSong(
-          songId: shuffledSongs[i].id,
-          addedBy: rand.nextBool() ? creatorId : uid,
-          addedAt: DateTime.now(),
-        ),
-      );
-    }
-
-    final blendResult = BlendModel(
-      id: blendId,
-      creatorId: creatorId,
-      friendId: uid,
-      compatibilityScore: score,
-      sharedArtists: ['Taylor Swift', 'VannDa', 'The Weeknd'],
-      sharedGenres: ['Pop', 'R&B'],
-      moodMatch: selectedMood,
-      blendedSongs: blendedSongs,
-      createdAt: DateTime.now(),
-    );
-
-    // Save to Firestore
-    await _firestore.collection('blends').doc(blendId).update({
-      ...blendResult.toJson(),
-      'userIds': [creatorId, uid],
-      'status': 'completed',
-    });
-
-    return blendResult;
   }
 }

@@ -5,6 +5,12 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/collab/**",
+        "destination": "/collab/index.html"
+      }
     ]
   },
   "flutter": {
